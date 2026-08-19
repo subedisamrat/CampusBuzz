@@ -14,15 +14,16 @@ export async function GET(req: NextRequest) {
     await dbConnect();
     const userId = (session.user as { id: string }).id;
 
-    const registrations = await Registration.find({ userId })
-      .populate('eventId', 'title date venue category registeredCount capacity feeType feeAmount')
-      .sort({ createdAt: -1 })
-      .lean();
-
-    const waitlists = await Waitlist.find({ userId })
-      .populate('eventId', 'title date venue category registeredCount capacity feeType feeAmount')
-      .sort({ joinedAt: -1 })
-      .lean();
+    const [registrations, waitlists] = await Promise.all([
+      Registration.find({ userId })
+        .populate('eventId', 'title date venue category registeredCount capacity feeType feeAmount')
+        .sort({ createdAt: -1 })
+        .lean(),
+      Waitlist.find({ userId })
+        .populate('eventId', 'title date venue category registeredCount capacity feeType feeAmount')
+        .sort({ joinedAt: -1 })
+        .lean(),
+    ]);
 
     const waitlistWithPositions = await Promise.all(waitlists.map(async (wl: any) => {
       if (!wl.eventId) return { ...wl, position: 0, queueLength: 0 };

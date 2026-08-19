@@ -8,10 +8,11 @@ export async function GET() {
   try {
     await dbConnect();
     
-    const eventsHosted = await Event.countDocuments();
-    const studentsRegistered = await Registration.countDocuments();
-    
-    const checkedInCount = await Registration.countDocuments({ checkedIn: true });
+    const [eventsHosted, studentsRegistered, checkedInCount] = await Promise.all([
+      Event.countDocuments(),
+      Registration.countDocuments(),
+      Registration.countDocuments({ checkedIn: true }),
+    ]);
     const checkInRate = studentsRegistered > 0 ? Math.round((checkedInCount / studentsRegistered) * 100) : 0;
     
     // Fallbacks to 0 or 15+ 

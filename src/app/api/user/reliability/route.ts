@@ -5,7 +5,6 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import {
   computeMetrics, getTierBenefits, isReliabilityModelReady,
-  updateStudentReliability,
 } from '@/lib/ml/reliabilityScoring';
 import { MODEL_PARAMS } from '@/lib/constants';
 import { TIER_CONFIG, TIER_IMPROVEMENT_TEXT } from '@/lib/constants';
@@ -68,9 +67,8 @@ export async function GET() {
     await dbConnect();
     const userId = session.user.id;
 
-    // Ensure the reliability data is fresh by running the update
-    await updateStudentReliability(userId);
-
+    // READ ONLY — never call updateStudentReliability() here.
+    // Score recomputation happens only after write events (register, check-in, cancel).
     const user = await User.findById(userId)
       .select('engagementTier reliabilityScore createdAt scoreHistory')
       .lean();

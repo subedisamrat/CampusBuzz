@@ -34,44 +34,32 @@ export async function GET() {
     await connectDB();
     const userId = session.user.id;
     const now = new Date();
-
-    // ── 1. Check if user is banned ────────────────────────────────────────────
-    const user = await User.findById(userId)
-      .select('isBanned banReason bannedAt')
-      .lean() as any;
-
-    // ── 2. Fetch all current registrations with event details ─────────────────
-    const registrations = await Registration.find({ userId: new mongoose.Types.ObjectId(userId) })
-      .populate('eventId', 'title date endDate venue feeType')
-      .lean() as any[];
-
-    // ── 3. Fetch active waitlist entries ──────────────────────────────────────
-    const waitlistEntries = await Waitlist.find({
-      userId: new mongoose.Types.ObjectId(userId),
-      abandonedAt: null,
-    })
-      .populate('eventId', 'title date venue feeType capacity registeredCount')
-      .lean() as any[];
-
-    // ── 4. Fetch notify-me interests ──────────────────────────────────────────
-    const interests = await EventInterest.find({
-      userId: new mongoose.Types.ObjectId(userId),
-    })
-      .populate('eventId', 'title date feeAmount registeredCount capacity')
-      .lean() as any[];
-
-    // ── 5. Fetch persisted notifications (unread or read in last 7 days) ──────
     const sevenDaysAgo = new Date(now.getTime() - 7 * TIME_UNITS.DAY_MS);
-    const persisted = await Notification.find({
-      userId: new mongoose.Types.ObjectId(userId),
-      $or: [
-        { readAt: null },
-        { readAt: { $gte: sevenDaysAgo } },
-      ],
-    })
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean() as any[];
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+
+    // ── Fetch all data in parallel ─────────────────────────────────────────────
+    const [user, registrations, waitlistEntries, interests, persisted] = await Promise.all([
+      User.findById(userId).select('isBanned banReason bannedAt').lean() as any,
+      Registration.find({ userId: userIdObj })
+        .populate('eventId', 'title date endDate venue feeType')
+        .lean() as any[],
+      Waitlist.find({ userId: userIdObj, abandonedAt: null })
+        .populate('eventId', 'title date venue feeType capacity registeredCount')
+        .lean() as any[],
+      EventInterest.find({ userId: userIdObj })
+        .populate('eventId', 'title date feeAmount registeredCount capacity')
+        .lean() as any[],
+      Notification.find({
+        userId: userIdObj,
+        $or: [
+          { readAt: null },
+          { readAt: { $gte: sevenDaysAgo } },
+        ],
+      })
+        .sort({ createdAt: -1 })
+        .limit(50)
+        .lean() as any[],
+    ]);
 
     // ── Build live notifications ───────────────────────────────────────────────
     const liveNotifs: any[] = [];

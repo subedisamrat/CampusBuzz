@@ -51,8 +51,10 @@ export async function GET(req: NextRequest) {
     const eventId = searchParams.get('eventId');
     if (!eventId) return NextResponse.json({ error: 'eventId required' }, { status: 400 });
 
-    const interest = await EventInterest.findOne({ userId: session.user.id, eventId }).lean();
-    const count = await EventInterest.countDocuments({ eventId });
+    const [interest, count] = await Promise.all([
+      EventInterest.findOne({ userId: session.user.id, eventId }).lean(),
+      EventInterest.countDocuments({ eventId }),
+    ]);
     return NextResponse.json({ interested: !!interest, count });
   } catch (err) {
     console.error('[EventInterest GET]', err);

@@ -117,8 +117,10 @@ export async function GET(req: NextRequest) {
     ]);
 
     // Calculate check-in rate
-    const totalRegistrations = await Registration.countDocuments();
-    const totalCheckins = await Registration.countDocuments({ checkedIn: true });
+    const [totalRegistrations, totalCheckins] = await Promise.all([
+      Registration.countDocuments(),
+      Registration.countDocuments({ checkedIn: true }),
+    ]);
     const checkinRate = totalRegistrations > 0 ? Math.round((totalCheckins / totalRegistrations) * 100) : 0;
 
     // Format chart data

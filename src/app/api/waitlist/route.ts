@@ -104,13 +104,15 @@ export async function GET(req: Request) {
     if (!eventId) return NextResponse.json({ error: 'eventId required' }, { status: 400 });
 
     const userId = session.user.id;
-    const positionData = await getWaitlistPosition(eventId, userId);
+    const [positionData, user] = await Promise.all([
+      getWaitlistPosition(eventId, userId),
+      User.findById(userId).select('engagementTier').lean() as any,
+    ]);
 
     if (!positionData) {
       return NextResponse.json({ onWaitlist: false });
     }
 
-    const user = await User.findById(userId).select('engagementTier').lean() as any;
     const tier = user?.engagementTier ?? 'new';
 
     const sorted = await getSortedWaitlist(eventId);
