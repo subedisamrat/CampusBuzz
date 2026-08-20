@@ -3,9 +3,13 @@
  * Eliminates the repeated `void import(...).then(...)` pattern across API routes.
  */
 
+import type { NotificationType } from '@/models/Notification';
+
+type ActivityAction = 'register' | 'checkin' | 'cancel' | 'waitlist_join' | 'waitlist_leave' | 'waitlist_promotion';
+
 export interface ActivityLogInput {
   userId: string;
-  action: string;
+  action: ActivityAction;
   eventId?: string;
   eventTitle?: string;
   details?: string;
@@ -14,7 +18,7 @@ export interface ActivityLogInput {
 
 export interface NotificationInput {
   userId: string;
-  type: string;
+  type: NotificationType;
   title: string;
   body: string;
   eventId?: string;

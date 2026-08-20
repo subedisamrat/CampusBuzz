@@ -418,7 +418,7 @@ export async function updateStudentReliability(userId: string): Promise<Reliabil
   // If an update is already in-flight, defer a re-run instead of skipping
   if (inflightUpdates.has(userId)) {
     pendingRetries.set(userId, true);
-    return inflightUpdates.get(userId);
+    return inflightUpdates.get(userId) ?? null;
   }
 
   const promise = _doUpdateReliability(userId);
