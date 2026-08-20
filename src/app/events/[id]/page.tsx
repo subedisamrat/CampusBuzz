@@ -413,7 +413,7 @@ export default function EventDetailPage() {
     return (
       <div>
         <Navbar />
-        <div style={{ padding: 60, textAlign: "center" }}>Event not found</div>
+        <div className="py-16 px-6 text-center text-gray-400">Event not found</div>
       </div>
     );
 
@@ -455,39 +455,22 @@ export default function EventDetailPage() {
           </div>
         </div>
       )}
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "48px 24px" }}>
+      <div className="max-w-[900px] mx-auto px-5 pt-10 pb-12 sm:px-6 sm:pt-12">
         <Link
           href="/events"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            color: "var(--text-muted)",
-            textDecoration: "none",
-            marginBottom: 32,
-            fontSize: 14,
-            fontWeight: 600,
-          }}
+          className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-8 font-semibold transition-colors"
         >
           <ArrowLeft size={16} /> Back to Events
         </Link>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 340px",
-            gap: 32,
-            alignItems: "start",
-          }}
-        >
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
+
           {/* Main Content */}
           <div>
             {/* Banner */}
             <div
+              className="h-48 sm:h-[280px] rounded-2xl mb-8 bg-cover bg-center flex items-end p-5 sm:p-6 relative overflow-hidden"
               style={{
-                height: 280,
-                borderRadius: 20,
-                marginBottom: 32,
                 background: event.imageUrl
                   ? `url(${event.imageUrl}) center/cover`
                   : `linear-gradient(135deg, ${
@@ -499,11 +482,6 @@ export default function EventDetailPage() {
                             ? "#f59e0b, #d97706"
                             : "#a78bfa, #7c3aed"
                     })`,
-                display: "flex",
-                alignItems: "flex-end",
-                padding: 24,
-                position: "relative",
-                overflow: "hidden",
               }}
             >
             </div>

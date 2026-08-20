@@ -84,7 +84,7 @@ function SignupForm() {
           <p className="text-sm text-muted-foreground">Join CampusBuzz for free</p>
         </div>
 
-        <div className="card p-9 shadow-xl">
+        <div className="card p-6 sm:p-9 shadow-xl">
           <form onSubmit={handleSubmit} className="flex flex-col gap-[18px]">
             <div>
               <label className="mb-2 block text-[13px] font-bold uppercase tracking-wider text-muted-foreground">

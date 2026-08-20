@@ -100,7 +100,7 @@ function LoginForm() {
           <p className="text-muted-foreground text-sm">Sign in to your account</p>
         </div>
 
-        <div className="card p-9">
+        <div className="card p-6 sm:p-9">
           {warming && (
             <div className="flex items-center gap-2 text-xs text-gray-500 mb-4 justify-center">
               <Loader2 size={12} className="animate-spin" />

@@ -22,7 +22,7 @@ export default function AdminLoginPage() {
   useEffect(() => {
     if (status === 'authenticated') {
       if ((session?.user as any)?.role === 'admin') {
-        router.push('/admin/dashboard');
+        window.location.href = '/admin/dashboard';
       } else {
         // Student tried admin login — sign them out
         signOut({ redirect: false }).then(() => {
@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
         });
       }
     }
-  }, [status, session, router]);
+  }, [status, session]);
 
   if (status === 'loading') {
     return (
@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
         }
 
         toast.success('Welcome, Admin!');
-        router.push('/admin/dashboard');
+        window.location.href = '/admin/dashboard';
       }
     } catch (error) {
       console.error('Login error:', error);

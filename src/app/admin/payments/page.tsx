@@ -286,7 +286,7 @@ export default function AdminPaymentsPage() {
             return (
               <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[700px]">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">User</th>

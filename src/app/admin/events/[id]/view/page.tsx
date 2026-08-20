@@ -197,7 +197,7 @@ export default function AdminEventViewPage() {
           >
             <ArrowLeft size={16} /> Back to Dashboard
           </Link>
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <span className={`badge cat-${event.category}`}>
@@ -649,7 +649,7 @@ export default function AdminEventViewPage() {
       {/* Cancel Confirmation Modal */}
       {cancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-          <div className="bg-[#0d1f1e] rounded-2xl w-full max-w-md shadow-2xl">
+          <div className="bg-[#0d1f1e] rounded-2xl w-full max-w-md shadow-2xl mx-4">
             <div className="p-6 pb-4">
               <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-500/10 mb-4 mx-auto">
                 <AlertTriangle className="w-7 h-7 text-red-500" />

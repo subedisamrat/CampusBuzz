@@ -170,7 +170,7 @@ export default function AdminStudentsPage() {
                 href={`/admin/students/${student._id}`}
                 className="block card p-4 hover:border-teal-500/30 transition-colors"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
                   <div className="w-10 h-10 rounded-full bg-teal-500/10 flex items-center justify-center text-sm font-bold text-teal-400 flex-shrink-0">
                     {student.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
@@ -183,9 +183,9 @@ export default function AdminStudentsPage() {
                     </div>
                     <p className="text-xs text-gray-500 truncate">{student.email}</p>
                   </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                   <TierBadge tier={student.engagementTier as 'champion' | 'regular' | 'new' | 'unreliable'} />
-                  <div className="flex items-center gap-4 pl-3 border-l border-white/10">
+                  <div className="hidden sm:flex items-center gap-4 pl-3 border-l border-white/10">
                     {/* Score */}
                     <div className="text-center min-w-[44px]">
                       <div className={`text-base font-extrabold ${

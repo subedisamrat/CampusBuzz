@@ -113,7 +113,7 @@ export default function NewEventPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="card p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="card p-6 sm:p-8 space-y-6">
           {/* Title */}
           <div>
             <label className="mb-2 block text-[13px] font-bold uppercase tracking-wider text-muted-foreground">

@@ -18,7 +18,7 @@ function FailedContent() {
         transition={{ duration: 0.4 }}
         className="max-w-md w-full text-center"
       >
-        <div className="rounded-2xl p-8 border"
+        <div className="rounded-2xl p-6 sm:p-8 border"
           style={{ background: '#1e293b', borderColor: '#334155' }}>
           <div className="flex justify-center mb-6">
             <HiXCircle className="w-20 h-20 text-red-500" />

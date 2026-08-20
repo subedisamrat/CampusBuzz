@@ -167,7 +167,7 @@ export default function StudentDetailPage() {
       </Link>
 
       {/* Section 1 — Header */}
-      <div className="flex items-start gap-6 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6 mb-8">
         <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-500/30 to-teal-600/20 flex items-center justify-center text-2xl font-black text-teal-400 ring-2 ring-teal-500/30 flex-shrink-0">
           {student.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
         </div>

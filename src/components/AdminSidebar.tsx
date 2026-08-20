@@ -149,24 +149,38 @@ const AdminSidebar = memo(function AdminSidebar({
       </div>
 
       {mobileMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="lg:hidden fixed top-16 left-0 right-0 z-30 bg-surface border-b border-border p-4"
-        >
-          <nav className="space-y-1">
-            {navItems.map((item) => nl(item, () => setMobileMenuOpen(false)))}
-          </nav>
-          <div className="mt-4 pt-4 border-t border-border">
-            <button
-              onClick={() => setShowLogoutConfirm(true)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-            >
-              <LogOut size={16} />
-              Sign Out
-            </button>
-          </div>
-        </motion.div>
+        <>
+          {/* Backdrop overlay */}
+          <div
+            className="lg:hidden fixed inset-0 z-20 bg-black/50 backdrop-blur-sm"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="lg:hidden fixed top-16 left-0 right-0 z-30 border-b border-white/10 p-4 max-h-[calc(100vh-4rem)] overflow-y-auto"
+            style={{
+              background: 'rgba(10, 21, 20, 0.97)',
+              backdropFilter: 'blur(20px)',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+            }}
+          >
+            <nav className="space-y-1">
+              {navItems.map((item) => nl(item, () => setMobileMenuOpen(false)))}
+            </nav>
+            <div className="mt-4 pt-4 border-t border-white/10">
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              >
+                <LogOut size={16} />
+                Sign Out
+              </button>
+            </div>
+          </motion.div>
+        </>
       )}
 
       {/* Logout Confirmation Modal */}

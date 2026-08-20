@@ -101,7 +101,9 @@ export default function Navbar({ showAdminLinks = true }: NavbarProps) {
 
           {/* Mobile menu */}
           {showMobileMenu && (
-            <div className="md:hidden py-4 border-t border-border">
+            <>
+              <div className="md:hidden fixed inset-0 z-30 bg-black/40" onClick={() => setShowMobileMenu(false)} />
+              <div className="md:hidden fixed top-16 left-0 right-0 z-40 py-4 border-b border-white/10" style={{ background: 'rgba(10, 21, 20, 0.97)', backdropFilter: 'blur(20px)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
               <div className="flex flex-col gap-1">
                 {sessionReady && isAdmin && showAdminLinks && (
                   <>
@@ -119,11 +121,18 @@ export default function Navbar({ showAdminLinks = true }: NavbarProps) {
                     <Link href="/my-reliability" onClick={() => setShowMobileMenu(false)} className={`px-4 py-2.5 text-sm font-semibold rounded-lg ${isActive('/my-reliability') ? 'text-pulse-400 bg-pulse-500/10' : 'text-gray-400'}`}>Reliability Score</Link>
                   </>
                 )}
+                {sessionReady && !isAdmin && !session && (
+                  <>
+                    <Link href="/auth/login" onClick={() => setShowMobileMenu(false)} className="px-4 py-2.5 text-sm font-semibold text-gray-400 rounded-lg">Login</Link>
+                    <Link href="/auth/signup" onClick={() => setShowMobileMenu(false)} className="px-4 py-2.5 text-sm font-semibold text-teal-400 rounded-lg">Sign Up</Link>
+                  </>
+                )}
                 {sessionReady && session && (
                   <button onClick={() => setShowLogoutConfirm(true)} className="px-4 py-2.5 text-sm font-semibold text-left text-gray-400 rounded-lg">Sign Out</button>
                 )}
               </div>
-            </div>
+              </div>
+            </>
           )}
         </div>
       </nav>

@@ -466,8 +466,8 @@ export default function NotificationBell() {
           className="absolute right-0 top-[calc(100%+8px)] rounded-2xl shadow-2xl z-[9999]
                      flex flex-col"
           style={{
-            width: '400px',
-            maxHeight: '580px',
+            width: 'min(400px, calc(100vw - 32px))',
+            maxHeight: 'min(580px, calc(100vh - 100px))',
             background: '#0a1520',
             border: '1px solid rgba(255,255,255,0.08)',
             boxShadow: '0 24px 64px rgba(0,0,0,0.5)',

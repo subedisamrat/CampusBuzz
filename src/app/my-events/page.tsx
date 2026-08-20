@@ -233,7 +233,7 @@ function MyEventsContent() {
       <div className="pt-24 pb-16 px-4 max-w-5xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center justify-between mb-2">
-            <h1 className="font-display font-extrabold text-4xl">
+            <h1 className="font-display font-extrabold text-2xl sm:text-4xl">
               My <span className="text-accent">Events</span>
             </h1>
           </div>

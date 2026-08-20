@@ -219,7 +219,7 @@ export default function MyReliabilityPage() {
           {metrics && (
             <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
               <h2 className="text-lg font-semibold text-white mb-4">Metrics</h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <MetricCard label="Registered Events" value={metrics.totalRegistered} icon={<Activity size={16} />} />
                 <MetricCard label="Attended Events" value={metrics.totalAttended} icon={<CheckCircle size={16} />} />
                 <MetricBar label="Attendance Rate" value={metrics.attendanceRate} />

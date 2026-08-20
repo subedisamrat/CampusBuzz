@@ -155,7 +155,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
           {!stats ? (
             <>
               {[1,2,3,4,5].map(i => <StatCardSkeleton key={i} />)}

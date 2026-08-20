@@ -116,7 +116,7 @@ export default function PaymentHistoryPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="card p-5 hover:bg-dark-border/50 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex items-center gap-4">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                           payment.provider === 'khalti' 
@@ -140,7 +140,7 @@ export default function PaymentHistoryPage() {
                           </p>
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right sm:text-right pl-16 sm:pl-0">
                         <div className="text-xl font-bold text-white">
                           Rs. {payment.amount}
                         </div>
