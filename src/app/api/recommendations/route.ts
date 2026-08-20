@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import { getRecommendations } from '@/lib/recommendations/recommender';
 import { recommendationCache } from '@/lib/recommendations/recommendationCache';
 
@@ -10,7 +10,7 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Login required' }, { status: 401 });
 
-    await connectDB();
+    await dbConnect();
     const userId = session.user.id;
 
     const cached = recommendationCache.get(userId);

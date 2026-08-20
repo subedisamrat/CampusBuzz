@@ -28,10 +28,3 @@ export function cacheSet<T>(key: string, data: T, ttl = DEFAULT_TTL) {
   } catch {}
 }
 
-export function cacheClear(key?: string) {
-  if (key) {
-    sessionStorage.removeItem(CACHE_PREFIX + key)
-  } else {
-    Object.keys(sessionStorage).filter(k => k.startsWith(CACHE_PREFIX)).forEach(k => sessionStorage.removeItem(k))
-  }
-}

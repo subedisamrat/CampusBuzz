@@ -1,15 +1,29 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Syne, Inter, Space_Mono } from 'next/font/google'
 import Providers from './providers'
 import { Toaster } from 'react-hot-toast'
 import BannedOverlay from '@/components/BannedOverlay'
 import BanLiftedOverlay from '@/components/BanLiftedOverlay'
 
+const syne = Syne({
+  subsets: ['latin'],
+  variable: '--font-syne',
+  display: 'swap',
+  weight: ['400', '500', '600', '700', '800'],
+})
+
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
   display: 'swap',
+})
+
+const spaceMono = Space_Mono({
+  subsets: ['latin'],
+  variable: '--font-space-mono',
+  display: 'swap',
+  weight: ['400', '700'],
 })
 
 export const metadata: Metadata = {
@@ -27,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${inter.variable} ${syne.variable} ${spaceMono.variable}`}>
       <body>
         <Providers>
           <BannedOverlay />

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 
 export async function POST(
@@ -14,7 +14,7 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await connectDB();
+    await dbConnect();
     const { reason, note } = await req.json();
 
     if (!reason?.trim()) {
@@ -67,7 +67,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await connectDB();
+    await dbConnect();
 
     await User.findByIdAndUpdate(params.id, {
       isBanned: false,

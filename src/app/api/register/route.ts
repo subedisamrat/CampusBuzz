@@ -7,19 +7,13 @@ import Registration from '@/models/Registration';
 import Event from '@/models/Event';
 import User from '@/models/User';
 import Waitlist from '@/models/Waitlist';
-import QRCode from 'qrcode';
 import { sendRegistrationEmail, sendCapacityAlertEmail, sendSpotReleasedEmail } from '@/lib/email';
 import { promoteTopWaitlistUser } from '@/lib/algorithms/waitlistManager';
 import { updateStudentReliability, getTierBenefits } from '@/lib/ml/reliabilityScoring';
 import { logActivity } from '@/lib/activityLog';
 import { format } from 'date-fns';
-import crypto from 'crypto';
 import { TIME_UNITS } from '@/lib/constants';
-
-function generateRegistrationId(): string {
-  const unique = crypto.randomBytes(8).toString('hex').toUpperCase();
-  return `CP-${unique}`;
-}
+import { generateRegistrationId } from '@/lib/qr';
 
 export async function POST(req: NextRequest) {
   try {
@@ -67,9 +61,9 @@ export async function POST(req: NextRequest) {
 
     try {
       const eventWithSession = await Event.findById(eventId).session(mongoSession);
-      if (!eventWithSession || eventWithSession.registeredCount >= eventWithSession.capacity) {
+      if (!eventWithSession || eventWithSession.registeredCount >= eventWithSession.capacity || eventWithSession.isCancelled) {
         await mongoSession.abortTransaction();
-        return NextResponse.json({ error: 'Event is full' }, { status: 400 });
+        return NextResponse.json({ error: 'Event is full or no longer available' }, { status: 400 });
       }
 
       // Option B: no QR yet — QR is generated only after attendance confirmation
@@ -123,7 +117,6 @@ export async function POST(req: NextRequest) {
       })();
 
       // Send a "registration received" email (no QR yet)
-      const regId = (registration[0]?._id ?? (registration as any)._id)?.toString();
       void (async () => {
         try {
           await sendRegistrationEmail({
@@ -187,16 +180,15 @@ export async function DELETE(req: NextRequest) {
     const { eventId } = await req.json();
     const userId = (session.user as { id: string }).id;
 
-    const registration = await Registration.findOne({ userId, eventId }).lean();
-    if (!registration) {
-      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
-    }
-
     const mongoSession = await mongoose.startSession();
     mongoSession.startTransaction();
 
     try {
-      await Registration.deleteOne({ userId, eventId }, { session: mongoSession });
+      const deleteResult = await Registration.deleteOne({ userId, eventId }, { session: mongoSession });
+      if (deleteResult.deletedCount === 0) {
+        await mongoSession.abortTransaction();
+        return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
+      }
       await Event.findByIdAndUpdate(eventId, { $inc: { registeredCount: -1 } }, { session: mongoSession });
       await mongoSession.commitTransaction();
     } catch (err) {

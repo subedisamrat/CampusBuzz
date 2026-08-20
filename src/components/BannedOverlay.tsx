@@ -26,9 +26,13 @@ export default function BannedOverlay() {
   const [banInfo, setBanInfo] = useState<BanInfo | null>(null);
   const [visible, setVisible] = useState(false);
   const prevUserIdRef = useRef<string>('');
+  const prevStatusRef = useRef<string>('loading');
 
   useEffect(() => {
     const isNowAuth = status === 'authenticated';
+    const wasAuth = prevStatusRef.current === 'authenticated';
+    prevStatusRef.current = status;
+
     if (!isNowAuth || !userId) {
       setBanInfo(null);
       setVisible(false);
@@ -40,6 +44,9 @@ export default function BannedOverlay() {
       prevUserIdRef.current = userId;
       setBanInfo(null);
       setVisible(false);
+    } else if (wasAuth) {
+      // Same user, already authenticated — session refreshed, skip re-fetch
+      return;
     }
 
     // Check if already seen this session for this user — never re-show

@@ -9,6 +9,7 @@ import { getModel, recordCheckin } from '@/lib/ml/modelManager';
 import { updateStudentReliability, maybeRetrain } from '@/lib/ml/reliabilityScoring';
 import { generateFlagReason } from '@/lib/ml/flagReasoning';
 import { ML_THRESHOLDS } from '@/lib/constants';
+import { logActivityFireAndForget, pushNotificationFireAndForget } from '@/lib/fireAndForget';
 
 function heuristicAnomalyScore(params: {
   hourOfDay: number;
@@ -215,31 +216,27 @@ export async function POST(req: NextRequest) {
     maybeRetrain();
 
     // Log activity
-    void import('@/lib/activityLog').then(({ logActivity }) => {
-      logActivity({
-        userId: existing.userId.toString(),
-        action: 'checkin',
-        eventId: existing.eventId.toString(),
-        eventTitle: (existing.eventId as any).title,
-        details: `Checked in to ${(existing.eventId as any).title}`,
-        algorithmTriggers: anomalyScore !== null ? [`Anomaly score: ${anomalyScore}`] : undefined,
-      }).catch(err => console.error(err));
-    }).catch(err => console.error(err));
+    logActivityFireAndForget({
+      userId: existing.userId.toString(),
+      action: 'checkin',
+      eventId: existing.eventId.toString(),
+      eventTitle: (existing.eventId as any).title,
+      details: `Checked in to ${(existing.eventId as any).title}`,
+      algorithmTriggers: anomalyScore !== null ? [`Anomaly score: ${anomalyScore}`] : undefined,
+    });
 
     // Push a "checked in" notification to the student
-    void import('@/lib/notifications').then(({ pushNotification }) => {
-      pushNotification({
-        userId: existing.userId.toString(),
-        type: 'checked_in',
-        title: '✅ Checked in successfully',
-        body: `You're in at ${(updated.eventId as any).title}. Enjoy the event!`,
-        eventId: existing.eventId.toString(),
-        registrationId: updated.registrationId,
-        actionUrl: `/my-events/checkin/${updated.registrationId}`,
-        actionLabel: 'View ticket',
-        ttlHours: 12,
-      }).catch(err => console.error(err));
-    }).catch(err => console.error(err));
+    pushNotificationFireAndForget({
+      userId: existing.userId.toString(),
+      type: 'checked_in',
+      title: '✅ Checked in successfully',
+      body: `You're in at ${(updated.eventId as any).title}. Enjoy the event!`,
+      eventId: existing.eventId.toString(),
+      registrationId: updated.registrationId,
+      actionUrl: `/my-events/checkin/${updated.registrationId}`,
+      actionLabel: 'View ticket',
+      ttlHours: 12,
+    });
 
     return NextResponse.json({
       success: true,

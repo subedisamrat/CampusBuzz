@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import Registration from '@/models/Registration';
 import User from '@/models/User';
 import { TIER_CONFIG } from '@/lib/constants';
@@ -9,23 +9,28 @@ import { sendAttendanceConfirmation } from '@/lib/email';
 
 // Simple in-memory cooldown: 1 resend per registration per hour
 const cooldowns = new Map<string, number>();
+const COOLDOWN_MS = 60 * 60 * 1000;
+let lastCleanup = Date.now();
 
-// Clean up old entries every hour to prevent memory leak
-setInterval(() => {
+function cleanupCooldowns() {
   const now = Date.now();
+  if (now - lastCleanup < COOLDOWN_MS) return;
+  lastCleanup = now;
   for (const [key, time] of cooldowns.entries()) {
-    if (now - time > 60 * 60 * 1000) cooldowns.delete(key);
+    if (now - time > COOLDOWN_MS) cooldowns.delete(key);
   }
-}, 60 * 60 * 1000);
+}
 
 export async function POST(req: Request) {
   try {
+    cleanupCooldowns();
+
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: 'Login required' }, { status: 401 });
     }
 
-    await connectDB();
+    await dbConnect();
     const { registrationId } = await req.json();
 
     if (!registrationId) {

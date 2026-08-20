@@ -1,10 +1,18 @@
+/**
+ * GET /api/user/reliability
+ *
+ * Returns the student's reliability score, tier, metrics, and improvement tips.
+ * READ ONLY — never calls updateStudentReliability() here.
+ * Score/tier are recomputed from fresh metrics to ensure UI always shows current state.
+ */
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import {
-  computeMetrics, getTierBenefits, isReliabilityModelReady,
+  computeMetrics, computeScore, classifyTier, getTierBenefits, isReliabilityModelReady,
 } from '@/lib/ml/reliabilityScoring';
 import { MODEL_PARAMS } from '@/lib/constants';
 import { TIER_CONFIG, TIER_IMPROVEMENT_TEXT } from '@/lib/constants';
@@ -68,22 +76,44 @@ export async function GET() {
     const userId = session.user.id;
 
     // READ ONLY — never call updateStudentReliability() here.
-    // Score recomputation happens only after write events (register, check-in, cancel).
     const user = await User.findById(userId)
-      .select('engagementTier reliabilityScore createdAt scoreHistory')
+      .select('engagementTier reliabilityScore createdAt scoreHistory adminOverriddenTier')
       .lean();
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const tier = (user as any).engagementTier ?? 'new';
-    const score = (user as any).reliabilityScore;
-    const retentionDays = MODEL_PARAMS.RETENTION_DAYS[tier] ?? 30;
+    // Recompute score/tier from fresh metrics (not from stale User doc)
+    const prevTier = (user as any).engagementTier ?? 'new';
+    const retentionDays = MODEL_PARAMS.RETENTION_DAYS[prevTier] ?? 60;
     const metrics = await computeMetrics(userId, retentionDays);
-    const benefits = getTierBenefits(tier);
 
-    const totalAttended = Math.round(metrics.attendanceRate * metrics.totalRegistrations);
+    // Use stored anomaly score from the most recent score history entry
+    let anomalyScore = 0;
+    const recentHistory = (user as any).scoreHistory;
+    if (Array.isArray(recentHistory) && recentHistory.length > 0) {
+      const latest = recentHistory[recentHistory.length - 1] as any;
+      if (latest?.anomalyScore != null) {
+        anomalyScore = latest.anomalyScore;
+      }
+    }
+
+    // Admin overrides take priority — don't recompute
+    let freshTier: string;
+    let freshScore: number | null;
+    let benefits;
+    if ((user as any).adminOverriddenTier) {
+      freshTier = prevTier;
+      freshScore = (user as any).reliabilityScore;
+      benefits = getTierBenefits(freshTier as any);
+    } else {
+      freshTier = classifyTier(metrics, anomalyScore);
+      freshScore = computeScore(metrics, anomalyScore) ?? 0;
+      benefits = getTierBenefits(freshTier as any);
+    }
+
+    const totalAttended = metrics.totalAttended;
     const metricsWithAttended: ReliabilityMetrics = {
       totalRegistrations: metrics.totalRegistrations,
       attendanceRate: metrics.attendanceRate,
@@ -91,12 +121,12 @@ export async function GET() {
       bulkRegistrationScore: metrics.bulkRegistrationScore,
       totalAttended,
     };
-    const improvementTip = computeImprovementTip(tier, metricsWithAttended);
+    const improvementTip = computeImprovementTip(freshTier, metricsWithAttended);
 
     return NextResponse.json({
-      tier,
-      score,
-      scoreHistory: (user as any).scoreHistory?.slice(0, 5) ?? [],
+      tier: freshTier,
+      score: freshScore,
+      scoreHistory: (user as any).scoreHistory?.slice(0, 10) ?? [],
       metrics: {
         totalRegistered: metrics.totalRegistrations,
         totalAttended,

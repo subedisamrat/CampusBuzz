@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import mongoose from 'mongoose';
 import Event from '@/models/Event';
 import Registration from '@/models/Registration';
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Admins cannot join waitlists' }, { status: 403 });
     }
 
-    await connectDB();
+    await dbConnect();
     const { eventId } = await req.json();
     const userId = session.user.id;
 
@@ -97,7 +97,7 @@ export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Login required' }, { status: 401 });
 
-    await connectDB();
+    await dbConnect();
     const { searchParams } = new URL(req.url);
     const eventId = searchParams.get('eventId');
 
@@ -150,7 +150,7 @@ export async function DELETE(req: Request) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Login required' }, { status: 401 });
 
-    await connectDB();
+    await dbConnect();
     const { eventId } = await req.json();
     const userId = session.user.id;
 

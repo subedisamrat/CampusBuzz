@@ -7,14 +7,8 @@ import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { Calendar, MapPin, Users, DollarSign, Clock, Tag, ArrowLeft } from 'lucide-react'
 import ImageUpload from '@/components/admin/ImageUpload'
-import { EVENT_CATEGORIES } from '@/lib/constants'
+import { EVENT_CATEGORIES, getMinDateTime } from '@/lib/constants'
 import TitleSetter from '@/components/TitleSetter'
-
-function getMinDateTime() {
-  const now = new Date()
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
-  return now.toISOString().slice(0, 16)
-}
 
 function formatDateForInput(date: Date | string) {
   const d = new Date(date)

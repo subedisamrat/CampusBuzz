@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import Notification from '@/models/Notification';
 import mongoose from 'mongoose';
 
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Login required' }, { status: 401 });
 
-    await connectDB();
+    await dbConnect();
     const userId = new mongoose.Types.ObjectId(session.user.id);
     const body = await req.json();
 

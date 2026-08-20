@@ -53,41 +53,6 @@ export const APP_LINKS = {
   githubRepo:     'https://github.com/campusbuzz',
 } as const;
 
-// ── Feature Flags ─────────────────────────────────────────────────────────────
-// Toggle entire features on/off without touching any business logic.
-// Set to false to disable a feature for testing or staged rollout.
-export const FEATURE_FLAGS = {
-  // Core features
-  enableWaitlist:             true,
-  enablePayments:             true,
-  enableRecommendations:      true,
-  enableReliabilityScoring:   true,
-  enableAutoConfirmations:    true,
-  enableEventInterest:        true,
-
-  // Communication
-  enableEmailNotifications:   true,
-  enableInAppNotifications:   true,
-  enableEventReminders:       true,
-  enableCapacityAlerts:       true,
-
-  // Admin features
-  enableActivityLog:          true,
-  enableBanSystem:            true,
-  enableManualTierOverride:   true,
-  enableAIFlagReasoning:      false, // Uses structured reasoning instead
-  enableBulkConfirmations:    true,
-
-  // UX features
-  enablePrintTicket:          true,
-  enableShareButton:          true,
-  enableCancelRegistration:   true,
-
-  // Development
-  showDebugPanels:    process.env.NODE_ENV === 'development',
-  logPerformance:     process.env.NODE_ENV === 'development',
-} as const;
-
 // ── Landing Page Content ──────────────────────────────────────────────────────
 // Edit these to update landing page features section without touching components.
 // icon field must be a valid Lucide icon name (imported in the component).

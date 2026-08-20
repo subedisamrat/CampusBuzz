@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import Registration from '@/models/Registration';
 
 export async function GET(
@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await connectDB();
+    await dbConnect();
 
     const registrations = await Registration.find({ userId: params.id })
       .populate('eventId', 'title date venue category')

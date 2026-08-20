@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useLayoutEffect, Suspense } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { cacheGet, cacheSet } from '@/lib/client-cache'
@@ -34,7 +34,7 @@ function MyEventsContent() {
   const [loading, setLoading] = useState(true)
 
   // Hydrate from cache before first paint (synchronous)
-  useLayoutEffect(() => {
+  useEffect(() => {
     const r = cacheGet<any[]>('my_registrations')
     const w = cacheGet<any[]>('my_waitlists')
     if (r) { setRegistrations(r); setWaitlists(w || []); setLoading(false) }
@@ -258,11 +258,6 @@ function MyEventsContent() {
               </div>
             </div>
           )}
-
-          {/* Attendance Stats Card — TASK-08 */}
-          <AttendanceStatsCardWrapper />
-          {/* Score History */}
-          <ScoreHistoryCardWrapper />
 
           <div className="flex gap-4 mb-6 border-b border-border">
             <button
@@ -591,24 +586,5 @@ function MyEventsContent() {
       </div>
     </div>
   )
-}
-
-// Lazy-loaded wrapper so AttendanceStatsCard doesn't block the page
-function AttendanceStatsCardWrapper() {
-  const [Component, setComponent] = useState<React.ComponentType | null>(null)
-  useEffect(() => {
-    import('@/components/AttendanceStatsCard').then(m => setComponent(() => m.default))
-  }, [])
-  if (!Component) return null
-  return <div className="mb-6"><Component /></div>
-}
-
-function ScoreHistoryCardWrapper() {
-  const [Component, setComponent] = useState<React.ComponentType | null>(null)
-  useEffect(() => {
-    import('@/components/ScoreHistoryCard').then(m => setComponent(() => m.default))
-  }, [])
-  if (!Component) return null
-  return <div className="mb-6"><Component /></div>
 }
 

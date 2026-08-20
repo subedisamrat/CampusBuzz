@@ -7,6 +7,7 @@ export interface IWaitlist extends Document {
   joinedAt: Date;
   abandonedAt: Date | null;
   wasPromoted: boolean;
+  promotedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,9 +18,10 @@ const WaitlistSchema = new Schema<IWaitlist>({
   joinedAt:      { type: Date, required: true, default: Date.now },
   abandonedAt:   { type: Date, default: null },
   wasPromoted:   { type: Boolean, default: false },
+  promotedAt:    { type: Date, default: null },
 }, { timestamps: true });
 
-WaitlistSchema.index({ eventId: 1, userId: 1 }, { unique: true });
+WaitlistSchema.index({ eventId: 1, userId: 1 }, { unique: true, partialFilterExpression: { abandonedAt: null } });
 
 export default mongoose.models.Waitlist ||
   mongoose.model<IWaitlist>('Waitlist', WaitlistSchema);

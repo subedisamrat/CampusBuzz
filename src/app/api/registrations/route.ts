@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
         .populate('eventId', 'title date venue category registeredCount capacity feeType feeAmount')
         .sort({ createdAt: -1 })
         .lean(),
-      Waitlist.find({ userId })
+      Waitlist.find({ userId, abandonedAt: null })
         .populate('eventId', 'title date venue category registeredCount capacity feeType feeAmount')
         .sort({ joinedAt: -1 })
         .lean(),

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback, useRef, useLayoutEffect } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -78,7 +78,7 @@ export default function MyReliabilityPage() {
   const [activityLoading, setActivityLoading] = useState(false)
 
   // Hydrate from cache before first paint (synchronous)
-  useLayoutEffect(() => {
+  useEffect(() => {
     const cached = cacheGet<any>('my_reliability')
     if (cached) {
       setTier(cached.tier)
@@ -116,9 +116,11 @@ export default function MyReliabilityPage() {
   }, [status, router])
 
   const activityCursorRef = useRef<string | null>(null)
+  const activityLoadingRef = useRef(false)
 
   const loadActivity = useCallback(async (reset = false) => {
-    if (activityLoading) return
+    if (activityLoadingRef.current) return
+    activityLoadingRef.current = true
     setActivityLoading(true)
     try {
       const cursor = reset ? null : activityCursorRef.current
@@ -136,9 +138,10 @@ export default function MyReliabilityPage() {
       setActivityHasMore(data.hasMore)
     } catch {
     } finally {
+      activityLoadingRef.current = false
       setActivityLoading(false)
     }
-  }, [activityLoading])
+  }, [])
 
   useEffect(() => {
     if (status === 'authenticated') {

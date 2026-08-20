@@ -1,4 +1,4 @@
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import Notification from '@/models/Notification';
 import type { NotificationType } from '@/models/Notification';
 
@@ -22,7 +22,7 @@ interface PushOptions {
  * Always fire-and-forget: void pushNotification(...).catch(...)
  */
 export async function pushNotification(opts: PushOptions): Promise<void> {
-  await connectDB();
+  await dbConnect();
 
   const expiresAt = new Date(
     Date.now() + (opts.ttlHours ?? 72) * 60 * 60 * 1000

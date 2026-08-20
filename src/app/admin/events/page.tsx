@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useLayoutEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import SoldOutStamp from '@/components/ui/SoldOutStamp'
 import { useRouter } from 'next/navigation'
@@ -33,7 +33,7 @@ export default function AdminEventsPage() {
   }, [search, filterDate, filterFee, filterStatus])
 
   // Hydrate from cache on mount
-  useLayoutEffect(() => {
+  useEffect(() => {
     const cached = cacheGet<any[]>('admin_events')
     if (cached) { setEvents(cached); setLoading(false) }
   }, [])

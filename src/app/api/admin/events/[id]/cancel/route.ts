@@ -23,22 +23,24 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await dbConnect();
     const eventId = params.id;
 
-    // Check if event exists
-    const event = await Event.findById(eventId);
-    if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
-    if (event.isCancelled) return NextResponse.json({ error: 'Event already cancelled' }, { status: 400 });
+    // Atomically set isCancelled (only if not already cancelled)
+    const updateResult = await Event.findOneAndUpdate(
+      { _id: eventId, isCancelled: { $ne: true } },
+      { $set: { isCancelled: true, cancelReason: reason, cancelledAt: new Date() } },
+      { new: true }
+    );
+    if (!updateResult) {
+      const existing = await Event.findById(eventId).lean();
+      if (!existing) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Event already cancelled' }, { status: 400 });
+    }
+    const event = updateResult;
 
     const mongoSession = await mongoose.startSession();
     mongoSession.startTransaction();
 
     let refundCount = 0;
     try {
-      // 1. Mark event as cancelled
-      event.isCancelled = true;
-      event.cancelReason = reason;
-      event.cancelledAt = new Date();
-      await event.save({ session: mongoSession });
-
       // 2. Find all registrations directly populated
       const registrations: any[] = await Registration.find({ eventId }).populate('userId').lean();
 

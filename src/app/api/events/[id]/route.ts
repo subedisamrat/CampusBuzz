@@ -10,7 +10,13 @@ import User from '@/models/User';
 import { sendCancellationEmail, sendCapacityIncreaseNotification } from '@/lib/email';
 import { format } from 'date-fns';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+const EVENT_UPDATE_FIELDS = [
+  'title', 'description', 'category', 'date', 'endDate', 'venue',
+  'capacity', 'feeType', 'feeAmount', 'isActive', 'isCancelled',
+  'imageUrl', 'registrationDeadline',
+] as const;
+
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
     await dbConnect();
     const event = (await Event.findById(params.id).lean()) as any;
@@ -63,7 +69,12 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       }
     }
 
-    const event = await Event.findByIdAndUpdate(params.id, body, { new: true });
+    const updateData: Record<string, unknown> = {};
+    for (const key of EVENT_UPDATE_FIELDS) {
+      if (key in body) updateData[key] = body[key];
+    }
+
+    const event = await Event.findByIdAndUpdate(params.id, updateData, { new: true, runValidators: true });
 
     // If capacity was increased
     if (body.capacity !== undefined && body.capacity > currentEvent.capacity) {

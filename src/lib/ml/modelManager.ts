@@ -1,3 +1,11 @@
+/**
+ * Manages the Isolation Forest model for check-in anomaly detection.
+ *
+ * The model is trained lazily on first use and retrained periodically.
+ * Training is non-blocking: if a training run is in progress, getModel()
+ * returns null so the caller falls through to heuristic scoring.
+ */
+
 import { IsolationForest } from './isolationForest';
 import { extractFeatures } from './checkinFeatures';
 import Registration from '@/models/Registration';
@@ -6,7 +14,12 @@ import { ML_THRESHOLDS } from '@/lib/constants';
 let model: IsolationForest | null = null;
 let checkinsSinceRetrain = 0;
 let trainingCount = 0;
+let trainingPromise: Promise<void> | null = null;
 
+/**
+ * Trains the Isolation Forest model on all valid checked-in registrations.
+ * Extracts feature vectors for each check-in and fits the model.
+ */
 export async function trainModel(): Promise<void> {
   const checkins = await Registration.find({
     checkedIn: true,
@@ -53,9 +66,18 @@ export async function ensureModelTraining(): Promise<void> {
   }
 }
 
+/**
+ * Returns the trained model if available.
+ * If training is in progress, returns null (non-blocking).
+ * The caller should fall through to heuristic scoring when null is returned.
+ */
 export async function getModel(): Promise<IsolationForest | null> {
-  if (!model) await trainModel();
-  return model;
+  if (model) return model;
+  // Start training if not already in progress
+  if (!trainingPromise) {
+    trainingPromise = trainModel().finally(() => { trainingPromise = null; });
+  }
+  return null;
 }
 
 export function isModelReady(): boolean {

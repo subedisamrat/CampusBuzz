@@ -1,5 +1,5 @@
-import connectDB from '@/lib/mongodb';
-import ActivityLog, { IActivityLog } from '@/models/ActivityLog';
+import dbConnect from '@/lib/mongodb';
+import ActivityLog from '@/models/ActivityLog';
 import User from '@/models/User';
 
 type Action = 'register' | 'checkin' | 'cancel' | 'waitlist_join' | 'waitlist_leave' | 'waitlist_promotion';
@@ -17,7 +17,7 @@ interface LogInput {
 
 export async function logActivity(input: LogInput): Promise<void> {
   try {
-    await connectDB();
+    await dbConnect();
 
     let tier = input.tier;
     let score = input.score;
@@ -48,7 +48,7 @@ export async function getActivityLog(
   limit: number = 20,
   cursor?: string
 ): Promise<{ entries: any[]; nextCursor: string | null; hasMore: boolean }> {
-  await connectDB();
+  await dbConnect();
 
   const query: any = { userId };
   if (cursor) {

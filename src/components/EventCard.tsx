@@ -15,10 +15,11 @@ interface EventCardProps {
   index?: number
   registered?: boolean
   waitlisted?: boolean
+  interested?: boolean
   onLeaveWaitlist?: (eventId: string) => void
 }
 
-function EventCard({ event, index = 0, registered = false, waitlisted = false, onLeaveWaitlist }: EventCardProps) {
+function EventCard({ event, index = 0, registered = false, waitlisted = false, interested = false, onLeaveWaitlist }: EventCardProps) {
   const capacity = event.capacity ?? 0
   const registeredCount = event.registeredCount ?? 0
   const spotsLeft = capacity - registeredCount
@@ -231,8 +232,8 @@ function EventCard({ event, index = 0, registered = false, waitlisted = false, o
             className="w-full py-2.5 rounded-xl text-sm font-semibold text-center
                        transition-all mt-auto block"
             style={{
-              background: 'rgba(34,197,94,0.1)',
-              border: '1px solid rgba(34,197,94,0.3)',
+              background: 'rgba(34,197,94,0.15)',
+              border: '1px solid rgba(34,197,94,0.35)',
               color: '#4ade80',
             }}
             onClick={e => e.stopPropagation()}
@@ -247,8 +248,8 @@ function EventCard({ event, index = 0, registered = false, waitlisted = false, o
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-center
                          transition-all block"
               style={{
-                background: 'rgba(245,158,11,0.08)',
-                border: '1px solid rgba(245,158,11,0.3)',
+                background: 'rgba(245,158,11,0.15)',
+                border: '1px solid rgba(245,158,11,0.35)',
                 color: '#f59e0b',
               }}
               onClick={e => e.stopPropagation()}
@@ -267,14 +268,29 @@ function EventCard({ event, index = 0, registered = false, waitlisted = false, o
               {leaving ? 'Leaving...' : 'Leave waitlist'}
             </button>
           </div>
+        ) : isFull && event.feeType === 'paid' && interested ? (
+          <Link
+            href={`/events/${event._id}`}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold text-center
+                       transition-all mt-auto block"
+            style={{
+              background: 'rgba(99,102,241,0.15)',
+              border: '1px solid rgba(99,102,241,0.35)',
+              color: '#818cf8',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <Bell size={14} className="inline mr-1.5 -mt-0.5" />
+            Notify Set
+          </Link>
         ) : isFull && event.feeType === 'paid' ? (
           <Link
             href={`/events/${event._id}`}
             className="w-full py-2.5 rounded-xl text-sm font-semibold text-center
                        transition-all mt-auto block"
             style={{
-              background: 'rgba(99,102,241,0.08)',
-              border: '1px solid rgba(99,102,241,0.3)',
+              background: 'rgba(99,102,241,0.15)',
+              border: '1px solid rgba(99,102,241,0.4)',
               color: '#818cf8',
             }}
             onClick={e => e.stopPropagation()}
@@ -288,8 +304,8 @@ function EventCard({ event, index = 0, registered = false, waitlisted = false, o
             className="w-full py-2.5 rounded-xl text-sm font-semibold text-center
                        transition-all mt-auto block"
             style={{
-              background: 'rgba(245,158,11,0.08)',
-              border: '1px solid rgba(245,158,11,0.3)',
+              background: 'rgba(245,158,11,0.15)',
+              border: '1px solid rgba(245,158,11,0.4)',
               color: '#f59e0b',
             }}
             onClick={e => e.stopPropagation()}

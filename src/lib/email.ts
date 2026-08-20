@@ -1,12 +1,28 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+let _transporter: nodemailer.Transporter | null = null;
+
+function getTransporter(): nodemailer.Transporter {
+  if (!_transporter) {
+    _transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+  }
+  return _transporter;
+}
+
+export async function verifyEmailTransport(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await getTransporter().verify();
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err.message ?? String(err) };
+  }
+}
 
 function buildEmailHtml({
   title,
@@ -133,7 +149,7 @@ export async function sendRegistrationEmail({
   qrCodeDataUrl: string; registrationId: string;
 }) {
   try {
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: `CampusBuzz <${process.env.EMAIL_USER}>`,
       to,
       subject: `Your ticket for ${eventName} 🎫`,
@@ -172,7 +188,7 @@ export async function sendPaymentConfirmation({
   qrCodeDataUrl: string; registrationId: string;
 }): Promise<void> {
   try {
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: `CampusBuzz <${process.env.EMAIL_USER}>`,
       to,
       subject: `Payment Confirmed – ${eventName} 💳`,
@@ -214,7 +230,7 @@ export async function sendPromotionEmail({
   qrCodeDataUrl: string; registrationId: string;
 }): Promise<void> {
   try {
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: `CampusBuzz <${process.env.EMAIL_USER}>`,
       to,
       subject: `You're in! A spot opened up — ${eventName}`,
@@ -250,7 +266,7 @@ export async function sendCancellationEmail({
   to: string; name: string; eventName: string; cancelReason: string;
 }): Promise<void> {
   try {
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: `CampusBuzz <${process.env.EMAIL_USER}>`,
       to,
       subject: `Event Cancelled – ${eventName}`,
@@ -280,7 +296,7 @@ export async function sendRefundConfirmation({
   to: string; name: string; eventName: string; amount: number; provider: string;
 }): Promise<void> {
   try {
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: `CampusBuzz <${process.env.EMAIL_USER}>`,
       to,
       subject: `Refund Processed – ${eventName}`,
@@ -322,7 +338,7 @@ export async function sendAttendanceConfirmation({
     const hoursLabel = confirmWindowHours >= 24
       ? `${Math.round(confirmWindowHours / 24)} days`
       : `${confirmWindowHours} hours`;
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: `CampusBuzz <${process.env.EMAIL_USER}>`,
       to,
       subject: `Confirm your attendance — ${eventName}`,
@@ -362,7 +378,7 @@ export async function sendCapacityIncreaseNotification({
   eventId: string; feeAmount: number;
 }): Promise<void> {
   try {
-    await transporter.sendMail({
+    await getTransporter().sendMail({
       from: `CampusBuzz <${process.env.EMAIL_USER}>`,
       to,
       subject: `Spots Available — ${eventName}`,
@@ -394,45 +410,6 @@ export async function sendCapacityIncreaseNotification({
   }
 }
 
-// ── 24h event reminder email ──────────────────────────────────────────────────
-export async function sendEventReminderEmail(params: {
-  to: string; name: string; eventName: string;
-  eventDate: string; eventVenue: string;
-  qrCodeDataUrl: string; registrationId: string; eventUrl: string;
-}): Promise<void> {
-  const { to, name, eventName, eventDate, eventVenue,
-          qrCodeDataUrl, registrationId, eventUrl } = params;
-
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM ?? process.env.EMAIL_USER,
-    to,
-    subject: `Reminder — ${eventName} is tomorrow`,
-    html: buildEmailHtml({
-      title: 'See you tomorrow! 🎉',
-      preheader: `Reminder: ${eventName} is tomorrow`,
-      greeting: `Hi ${name},`,
-      body: `
-        <p>This is a reminder for your upcoming event.</p>
-        <table style="width:100%;margin:16px 0;border-collapse:collapse;">
-          <tr>
-            <td style="padding:8px 0;color:#64748b;font-size:14px;width:100px;">📅 Date</td>
-            <td style="padding:8px 0;font-weight:500;color:#0f172a;">${eventDate}</td>
-          </tr>
-          <tr>
-            <td style="padding:8px 0;color:#64748b;font-size:14px;">📍 Venue</td>
-            <td style="padding:8px 0;font-weight:500;color:#0f172a;">${eventVenue}</td>
-          </tr>
-        </table>
-      `,
-      qrCodeDataUrl,
-      registrationId,
-      ctaUrl: eventUrl,
-      ctaLabel: 'View Event Details',
-      footerNote: 'If you can no longer attend, please cancel your registration so others on the waitlist can take your spot.',
-    }),
-  });
-}
-
 // ── Capacity alert email to admin ─────────────────────────────────────────────
 export async function sendCapacityAlertEmail(params: {
   adminEmail: string; eventName: string; eventDate: string;
@@ -444,37 +421,41 @@ export async function sendCapacityAlertEmail(params: {
 
   const isFull = fillPercent >= 100;
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM ?? process.env.EMAIL_USER,
-    to: adminEmail,
-    subject: isFull
-      ? `Event Full — ${eventName}`
-      : `${fillPercent}% Full — ${eventName}`,
-    html: buildEmailHtml({
-      title: isFull ? 'Event is Full! 🎉' : `${fillPercent}% Capacity Reached`,
-      preheader: `Capacity alert for ${eventName}`,
-      greeting: 'Hi Admin,',
-      body: `
-        <p><strong>${eventName}</strong></p>
-        <p style="color:#64748b;font-size:14px;">${eventDate}</p>
-        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:16px 0;">
-          <p style="margin:0 0 4px;font-size:15px;">
-            Registered: <strong>${registeredCount}</strong> / ${capacity}
+  try {
+    await getTransporter().sendMail({
+      from: process.env.EMAIL_FROM ?? process.env.EMAIL_USER,
+      to: adminEmail,
+      subject: isFull
+        ? `Event Full — ${eventName}`
+        : `${fillPercent}% Full — ${eventName}`,
+      html: buildEmailHtml({
+        title: isFull ? 'Event is Full! 🎉' : `${fillPercent}% Capacity Reached`,
+        preheader: `Capacity alert for ${eventName}`,
+        greeting: 'Hi Admin,',
+        body: `
+          <p><strong>${eventName}</strong></p>
+          <p style="color:#64748b;font-size:14px;">${eventDate}</p>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin:16px 0;">
+            <p style="margin:0 0 4px;font-size:15px;">
+              Registered: <strong>${registeredCount}</strong> / ${capacity}
+            </p>
+            ${isFull && waitlistCount > 0
+              ? `<p style="margin:4px 0 0;font-size:14px;color:#64748b;">Waitlist: <strong>${waitlistCount}</strong> students waiting</p>`
+              : ''}
+          </div>
+          <p style="color:#64748b;">
+            ${isFull
+              ? 'Consider increasing capacity if the venue allows.'
+              : 'Your event is filling up. Consider expanding capacity if needed.'}
           </p>
-          ${isFull && waitlistCount > 0
-            ? `<p style="margin:4px 0 0;font-size:14px;color:#64748b;">Waitlist: <strong>${waitlistCount}</strong> students waiting</p>`
-            : ''}
-        </div>
-        <p style="color:#64748b;">
-          ${isFull
-            ? 'Consider increasing capacity if the venue allows.'
-            : 'Your event is filling up. Consider expanding capacity if needed.'}
-        </p>
-      `,
-      ctaUrl: eventAdminUrl,
-      ctaLabel: 'View Event',
-    }),
-  });
+        `,
+        ctaUrl: eventAdminUrl,
+        ctaLabel: 'View Event',
+      }),
+    });
+  } catch (err) {
+    console.error('[Email] sendCapacityAlertEmail failed:', err);
+  }
 }
 
 export async function sendSpotReleasedEmail(params: {
@@ -488,21 +469,16 @@ export async function sendSpotReleasedEmail(params: {
     manual_cancel: 'You cancelled your registration.',
   }[params.reason];
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM ?? process.env.EMAIL_USER,
-    to: params.to,
-    subject: `Registration Released — ${params.eventName}`,
-    html: `
-      <div style="font-family:-apple-system,sans-serif;max-width:560px;margin:0 auto;
-                  background:#ffffff;border-radius:16px;overflow:hidden;">
-        <div style="background:linear-gradient(135deg,#0f766e,#14b8a6);
-                    padding:32px;text-align:center;">
-          <span style="color:#fff;font-size:22px;font-weight:700;">CampusBuzz</span>
-        </div>
-        <div style="padding:32px;">
-          <h2 style="color:#0f172a;font-size:20px;font-weight:700;margin:0 0 16px;">
-            Your registration was released
-          </h2>
+  try {
+    await getTransporter().sendMail({
+      from: process.env.EMAIL_FROM ?? process.env.EMAIL_USER,
+      to: params.to,
+      subject: `Registration Released — ${params.eventName}`,
+      html: buildEmailHtml({
+        title: 'Your registration was released',
+        preheader: `Your registration for ${params.eventName} was released`,
+        greeting: `Hi ${params.name},`,
+        body: `
           <div style="background:#fef9c3;border:1px solid #fde047;
                       border-radius:12px;padding:16px;margin-bottom:20px;">
             <p style="color:#713f12;font-weight:600;margin:0 0 4px;">${params.eventName}</p>
@@ -512,17 +488,13 @@ export async function sendSpotReleasedEmail(params: {
           <p style="color:#334155;font-size:14px;margin-bottom:20px;">
             If spots are still available, you can register again.
           </p>
-          <a href="${params.eventUrl}"
-             style="display:inline-block;background:#14b8a6;color:#fff;
-                    padding:12px 24px;border-radius:10px;text-decoration:none;
-                    font-weight:600;">
-            View Event
-          </a>
-        </div>
-        <div style="padding:16px 32px;background:#f8fafc;text-align:center;">
-          <p style="font-size:12px;color:#94a3b8;margin:0;">© 2025 CampusBuzz</p>
-        </div>
-      </div>
-    `,
-  });
+        `,
+        ctaUrl: params.eventUrl,
+        ctaLabel: 'View Event',
+        footerNote: 'If you believe this was a mistake, please contact the event organiser.',
+      }),
+    });
+  } catch (err) {
+    console.error('[Email] sendSpotReleasedEmail failed:', err);
+  }
 }

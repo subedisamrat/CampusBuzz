@@ -53,8 +53,14 @@ export default function StudentDetailPage() {
       Promise.all([
         fetch(`/api/admin/students/${id}`).then(r => r.json()),
         fetch(`/api/admin/students/${id}/registrations`).then(r => r.json()),
-      ]).then(([sData, rData]) => {
-        setStudent(sData.student || sData);
+        fetch(`/api/admin/students/${id}/reliability`).then(r => r.json()),
+      ]).then(([sData, rData, relData]) => {
+        const base = sData.student || sData;
+        // Merge fresh reliability data from the /reliability endpoint
+        if (relData.tier !== undefined) base.engagementTier = relData.tier;
+        if (relData.score !== undefined) base.reliabilityScore = relData.score;
+        if (relData.scoreHistory) base.scoreHistory = relData.scoreHistory;
+        setStudent(base);
         setRegistrations(rData.registrations || []);
       }).finally(() => setLoading(false));
     }

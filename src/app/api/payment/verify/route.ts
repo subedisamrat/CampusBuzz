@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Payment from '@/models/Payment';
 import { completeRegistration } from '@/lib/payment';
 import crypto from 'crypto';
 
-const KHALTI_SECRET_KEY = process.env.KHALTI_SECRET_KEY || '';
-const KHALTI_API_URL = process.env.KHALTI_API_URL || 'https://dev.khalti.com/api/v2';
-const ESEWA_SECRET_KEY = process.env.ESEWA_SECRET_KEY || '';
-
 function verifyEsewaSignature(dataStr: string, receivedSignature: string): boolean {
   try {
-    const hmac = crypto.createHmac('sha256', ESEWA_SECRET_KEY);
+    const hmac = crypto.createHmac('sha256', process.env.ESEWA_SECRET_KEY || '');
     hmac.update(dataStr);
     const expected = hmac.digest('base64');
     return expected === receivedSignature;
@@ -21,6 +19,11 @@ function verifyEsewaSignature(dataStr: string, receivedSignature: string): boole
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Login required' }, { status: 401 });
+    }
+
     await dbConnect();
     const body = await req.json();
     const { provider } = body;
@@ -43,10 +46,10 @@ export async function POST(req: NextRequest) {
       }
 
       // Khalti API Lookup
-      const lookupRes = await fetch(`${KHALTI_API_URL}/epayment/lookup/`, {
+      const lookupRes = await fetch(`${process.env.KHALTI_API_URL || 'https://dev.khalti.com/api/v2'}/epayment/lookup/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Key ${KHALTI_SECRET_KEY}`,
+          'Authorization': `Key ${process.env.KHALTI_SECRET_KEY || ''}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ pidx }),

@@ -1,11 +1,11 @@
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import Event from '@/models/Event';
 import Registration from '@/models/Registration';
 import { sendConfirmationsForEvent } from '@/lib/confirmations';
 
 export async function autoTriggerConfirmations(): Promise<void> {
   try {
-    await connectDB();
+    await dbConnect();
     const now = new Date();
     const windowStart = new Date(now.getTime() + 2.5 * 24 * 60 * 60 * 1000);
     const windowEnd   = new Date(now.getTime() + 3.5 * 24 * 60 * 60 * 1000);
@@ -44,10 +44,3 @@ export async function autoTriggerConfirmations(): Promise<void> {
   }
 }
 
-export async function sendPendingReminders(): Promise<void> {
-  try {
-    // Placeholder for future reminder logic
-  } catch (err) {
-    console.error('[Reminders] Failed:', err);
-  }
-}

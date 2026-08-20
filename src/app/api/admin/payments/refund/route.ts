@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import Payment from '@/models/Payment';
 import { sendRefundConfirmation } from '@/lib/email';
 
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  await connectDB();
+  await dbConnect();
 
   try {
     const { paymentId } = await req.json();
@@ -29,15 +29,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Can only refund completed payments' }, { status: 400 });
     }
 
-    if (payment.status === 'refunded') {
-      return NextResponse.json({ error: 'Payment already refunded' }, { status: 400 });
-    }
-
     let refundSuccess = false;
 
     if (payment.provider === 'khalti') {
       try {
-        const khaltiRefund = await fetch('https://dev.khalti.com/api/v2/epayment/refund/', {
+        const khaltiApiUrl = process.env.KHALTI_API_URL || 'https://dev.khalti.com/api/v2';
+        const khaltiRefund = await fetch(`${khaltiApiUrl}/epayment/refund/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -51,16 +48,38 @@ export async function POST(req: Request) {
 
         if (khaltiRefund.ok) {
           refundSuccess = true;
+        } else {
+          const errorBody = await khaltiRefund.text().catch(() => '');
+          console.error('[Refund] Khalti API rejected refund:', khaltiRefund.status, errorBody);
         }
       } catch (err) {
         console.error('[Refund] Khalti refund failed:', err);
       }
+
+      if (!refundSuccess) {
+        return NextResponse.json({
+          error: 'Khalti refund failed. Payment NOT marked as refunded.',
+          khaltiStatus: 'failed',
+        }, { status: 400 });
+      }
     }
 
     if (payment.provider === 'esewa') {
-      refundSuccess = true;
+      // eSewa refund requires manual processing — mark as refund_pending for admin follow-up
+      payment.status = 'refund_pending';
+      payment.refundedAt = new Date();
+      payment.refundedBy = session.user.id as unknown as import('mongoose').Types.ObjectId;
+      await payment.save();
+
+      return NextResponse.json({
+        success: true,
+        message: 'eSewa refund requires manual processing. Payment marked as refund_pending.',
+        externalRefundAttempted: false,
+        externalRefundSuccess: null,
+      });
     }
 
+    // Khalti (already verified success above) — mark as refunded
     payment.status = 'refunded';
     payment.refundedAt = new Date();
     payment.refundedBy = session.user.id as unknown as import('mongoose').Types.ObjectId;

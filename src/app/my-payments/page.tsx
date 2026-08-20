@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useLayoutEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { cacheGet, cacheSet } from '@/lib/client-cache'
@@ -27,7 +27,7 @@ export default function PaymentHistoryPage() {
   const [loading, setLoading] = useState(true)
 
   // Hydrate from cache before first paint (synchronous)
-  useLayoutEffect(() => {
+  useEffect(() => {
     const p = cacheGet<any[]>('my_payments')
     if (p) { setPayments(p); setLoading(false) }
   }, [])

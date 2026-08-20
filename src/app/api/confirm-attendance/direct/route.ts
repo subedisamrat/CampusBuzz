@@ -5,8 +5,8 @@ import dbConnect from '@/lib/mongodb';
 import Registration from '@/models/Registration';
 import User from '@/models/User';
 import Event from '@/models/Event';
-import QRCode from 'qrcode';
 import { sendRegistrationEmail } from '@/lib/email';
+import { generateQRCode } from '@/lib/qr';
 import { format } from 'date-fns';
 
 export async function POST(req: NextRequest) {
@@ -41,19 +41,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Already confirmed.' }, { status: 409 });
     }
 
-    const qrData = JSON.stringify({
-      registrationId: registration.registrationId,
-      eventId: registration.eventId.toString(),
-      userId: registration.userId.toString(),
-    });
-    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
-      width: 300, margin: 2, errorCorrectionLevel: 'H',
-    });
+    const qrCodeDataUrl = await generateQRCode(
+      registration.registrationId,
+      registration.eventId.toString(),
+      registration.userId.toString()
+    );
 
-    registration.qrCode = qrCodeDataUrl;
-    registration.confirmed = true;
-    registration.confirmToken = undefined;
-    await registration.save();
+    // Atomic update: only confirm if still unconfirmed (prevents race condition)
+    const updated = await Registration.findOneAndUpdate(
+      { _id: registration._id, confirmed: false },
+      { $set: { qrCode: qrCodeDataUrl, confirmed: true, confirmToken: undefined } },
+      { new: true }
+    );
+    if (!updated) {
+      return NextResponse.json({ error: 'Already confirmed.' }, { status: 409 });
+    }
 
     try {
       const [user, event] = await Promise.all([

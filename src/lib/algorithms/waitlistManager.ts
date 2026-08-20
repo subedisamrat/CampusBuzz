@@ -3,12 +3,12 @@ import Registration from '@/models/Registration';
 import Waitlist from '@/models/Waitlist';
 import Event from '@/models/Event';
 import User from '@/models/User';
-import QRCode from 'qrcode';
-import crypto from 'crypto';
 import { sendPromotionEmail } from '@/lib/email';
 import { WAITLIST_CONFIG, TIER_CONFIG, CONFIRMATION_CONFIG } from '@/lib/constants';
 import { updateStudentReliability } from '@/lib/ml/reliabilityScoring';
 import { logActivity } from '@/lib/activityLog';
+import { generateRegistrationId, generateQRCode } from '@/lib/qr';
+import { pushNotificationFireAndForget } from '@/lib/fireAndForget';
 
 function computeScoreInline(
   userId: string,
@@ -121,11 +121,8 @@ export async function promoteTopWaitlistUser(eventId: string): Promise<void> {
   const topEntry = sorted[0];
   const userId = topEntry.userId;
 
-  const registrationId = `CP-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
-  const qrData = JSON.stringify({ registrationId, eventId, userId });
-  const qrCode = await QRCode.toDataURL(qrData, {
-    width: 300, margin: 2, errorCorrectionLevel: 'H',
-  });
+  const registrationId = generateRegistrationId();
+  const qrCode = await generateQRCode(registrationId, eventId, userId);
 
   const dbSession = await mongoose.startSession();
   dbSession.startTransaction();
@@ -157,7 +154,7 @@ export async function promoteTopWaitlistUser(eventId: string): Promise<void> {
 
     await Waitlist.findOneAndUpdate(
       { eventId, userId, abandonedAt: null },
-      { $set: { wasPromoted: true, abandonedAt: new Date() } },
+      { $set: { wasPromoted: true, promotedAt: new Date(), abandonedAt: new Date() } },
       { session: dbSession }
     );
 
@@ -182,6 +179,18 @@ export async function promoteTopWaitlistUser(eventId: string): Promise<void> {
       qrCodeDataUrl: qrCode,
       registrationId,
     }).catch(err => console.error('[Waitlist] Promotion email failed:', err));
+
+    pushNotificationFireAndForget({
+      userId,
+      type: 'promoted',
+      title: 'You got a spot!',
+      body: `A spot opened up in ${event.title}. You've been automatically registered. Check your email for the QR code.`,
+      eventId,
+      registrationId,
+      actionUrl: `/my-events`,
+      actionLabel: 'View registration',
+      ttlHours: 72,
+    });
   }
 
   // Log activity

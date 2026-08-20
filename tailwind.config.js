@@ -9,9 +9,9 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-syne)', 'sans-serif'],
+        sans: ['var(--font-sans)', 'sans-serif'],
         mono: ['var(--font-space-mono)', 'monospace'],
-        display: ['var(--font-clash)', 'sans-serif'],
+        display: ['var(--font-syne)', 'sans-serif'],
       },
       colors: {
         pulse: {

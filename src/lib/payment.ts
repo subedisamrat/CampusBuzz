@@ -5,6 +5,7 @@ import Registration from '@/models/Registration';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 import { sendPaymentConfirmation } from '@/lib/email';
+import { generateRegistrationId, generateQRCode } from '@/lib/qr';
 
 async function withRetry<T>(
   fn: () => Promise<T>,
@@ -31,7 +32,7 @@ async function withRetry<T>(
 
 const KHALTI_SECRET_KEY = process.env.KHALTI_SECRET_KEY || '';
 const KHALTI_API_URL = process.env.KHALTI_API_URL || 'https://dev.khalti.com/api/v2';
-const KHALTI_VERIFY_URL = 'https://dev.khalti.com/api/v2/epayment/lookup/';
+const KHALTI_VERIFY_URL = `${KHALTI_API_URL}/epayment/lookup/`;
 
 const ESEWA_SECRET_KEY = process.env.ESEWA_SECRET_KEY || '';
 const ESEWA_MERCHANT_ID = process.env.ESEWA_MERCHANT_ID || '';
@@ -225,14 +226,9 @@ export async function verifyEsewaPayment(
   amount: string
 ): Promise<boolean> {
   try {
-    const response = await fetch(`${ESEWA_API_URL}/epay/transaction/status/?`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-
     const params = new URLSearchParams({
       merchantId: ESEWA_MERCHANT_ID,
-      scd: 'EPAYTEST',
+      scd: ESEWA_MERCHANT_ID,
       rid: refId,
       prn: purchaseOrderId,
     });
@@ -264,13 +260,7 @@ export async function completeRegistration(paymentId: string, userId: string, ev
   if (existingReg) {
     // Already registered — update with QR and payment info if not set
     if (!existingReg.qrCode) {
-      const QRCode = await import('qrcode');
-      const qrData = JSON.stringify({ registrationId: existingReg.registrationId, eventId, userId });
-      const qrCode = await QRCode.toDataURL(qrData, {
-        width: 300,
-        margin: 2,
-        errorCorrectionLevel: 'H',
-      });
+      const qrCode = await generateQRCode(existingReg.registrationId, eventId, userId);
       await Registration.findByIdAndUpdate(existingReg._id, {
         qrCode,
         confirmed: true,
@@ -303,14 +293,8 @@ export async function completeRegistration(paymentId: string, userId: string, ev
         throw new Error('Event is full');
       }
 
-      const registrationId = `CP-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
-      const QRCode = await import('qrcode');
-      const qrData = JSON.stringify({ registrationId, eventId, userId });
-      const qrCode = await QRCode.toDataURL(qrData, {
-        width: 300,
-        margin: 2,
-        errorCorrectionLevel: 'H',
-      });
+      const registrationId = generateRegistrationId();
+      const qrCode = await generateQRCode(registrationId, eventId, userId);
 
       const registration = await Registration.findOneAndUpdate(
         { userId, eventId },
@@ -383,8 +367,3 @@ export async function getPaymentHistory(userId: string) {
     .lean();
 }
 
-export async function getPaymentById(paymentId: string) {
-  return Payment.findById(paymentId)
-    .populate('eventId', 'title date venue')
-    .populate('userId', 'name email');
-}

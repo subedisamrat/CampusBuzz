@@ -15,7 +15,8 @@ export default function ScannerPage() {
   const [result, setResult] = useState<any>(null)
   const [manualCode, setManualCode] = useState('')
   const [loading, setLoading] = useState(false)
-  const scannerRef = useRef<any>(null)
+  const processingRef = useRef(false)
+  const cooldownRef = useRef(false)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/login')
@@ -37,9 +38,14 @@ export default function ScannerPage() {
         )
         html5QrCode.render(
           async (decodedText: string) => {
+            if (processingRef.current || cooldownRef.current) return
+            processingRef.current = true
             await html5QrCode.clear()
             setScanning(false)
             await processQR(decodedText)
+            processingRef.current = false
+            cooldownRef.current = true
+            setTimeout(() => { cooldownRef.current = false }, 1500)
           },
           (error: any) => {}
         )
@@ -119,8 +125,10 @@ export default function ScannerPage() {
 
   const handleManual = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!manualCode.trim()) return
+    if (!manualCode.trim() || processingRef.current) return
+    processingRef.current = true
     await processQR(manualCode)
+    processingRef.current = false
   }
 
   return (
@@ -293,7 +301,7 @@ export default function ScannerPage() {
                   )}
 
                   <button
-                    onClick={() => { setResult(null); setManualCode('') }}
+                    onClick={() => { setResult(null); setManualCode(''); cooldownRef.current = false }}
                     className="mt-6 w-full py-4 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-lg font-bold transition-all flex items-center justify-center gap-2"
                   >
                     <HiRefresh size={22} /> SCAN NEXT ATTENDEE

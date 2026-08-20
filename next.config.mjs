@@ -3,11 +3,14 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**",
+        hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
       },
     ],
   },
-  // Increase the timeout for API routes to handle slow first-compile in dev
   experimental: {
     serverComponentsExternalPackages: ['mongoose', 'bcryptjs'],
   },

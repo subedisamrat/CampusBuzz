@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import Registration from '@/models/Registration';
 import Waitlist from '@/models/Waitlist';
 import EventInterest from '@/models/EventInterest';
@@ -31,7 +31,7 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Login required' }, { status: 401 });
 
-    await connectDB();
+    await dbConnect();
     const userId = session.user.id;
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * TIME_UNITS.DAY_MS);

@@ -1,15 +1,37 @@
+/**
+ * Reliability Scoring System
+ *
+ * Computes a 0–100 reliability score and engagement tier (champion/regular/new/unreliable)
+ * for each student based on their event attendance behavior.
+ *
+ * Score formula (weights sum to 100):
+ *   attendanceRate × 40          — core signal: did they show up?
+ *   recentAttendanceRate × 15    — trend: are they improving or declining?
+ *   (1 − cancellationRate) × 10 — commitment: do they follow through?
+ *   (1 − confirmationNorm) × 5  — responsiveness: how fast do they confirm?
+ *   waitlistBehavior × 10        — reliability: do they honor waitlist commitments?
+ *   (1 − anomalyScore) × 15     — ML signal: is their behavior normal?
+ *   (1 − bulkRegNorm) × 5       — anti-gaming: are they mass-registering?
+ *
+ * Tiers determine student benefits:
+ *   champion  — 48h confirm window, 2× waitlist priority
+ *   regular   — 24h confirm window, 1× waitlist priority
+ *   new       — 24h confirm window, no waitlist priority
+ *   unreliable — 12h confirm window, waitlist penalty
+ */
+
 import mongoose from 'mongoose';
 import User from '@/models/User';
 import Registration from '@/models/Registration';
 import Waitlist from '@/models/Waitlist';
 import { IsolationForest } from './isolationForest';
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import {
   MODEL_PARAMS,
   ISOLATION_FOREST_TREES,
   ISOLATION_FOREST_SAMPLE,
 } from '@/lib/constants';
-import { TIER_CONFIG, ML_THRESHOLDS, TIME_UNITS, WAITLIST_HOUR_DISCOUNT_MS } from '@/lib/constants';
+import { TIER_CONFIG, ML_THRESHOLDS, TIME_UNITS } from '@/lib/constants';
 
 export type EngagementTier = 'champion' | 'regular' | 'new' | 'unreliable';
 
@@ -35,7 +57,30 @@ export interface ReliabilityResult {
   waitlistMultiplier: number;
 }
 
-export async function computeMetrics(userId: string, retentionDays: number = 30): Promise<ReliabilityMetrics> {
+/**
+ * Builds the 7-dimensional feature vector for the reliability Isolation Forest.
+ * Extracted here to avoid duplication between training and scoring.
+ */
+function buildFeatureVector(metrics: ReliabilityMetrics): number[] {
+  return [
+    metrics.attendanceRate,
+    metrics.waitlistAbandonRate,
+    Math.min(metrics.bulkRegistrationScore / 10, 1),
+    metrics.cancellationRate,
+    metrics.recentAttendanceRate,
+    Math.min(metrics.confirmationResponseHours / 48, 1),
+    1 - metrics.waitlistConversionRate,
+  ];
+}
+
+/**
+ * Computes all reliability metrics for a student from raw DB data.
+ * All DB queries run in parallel for performance.
+ *
+ * @param userId - Student user ID
+ * @param retentionDays - How far back to look for bulk registration detection (default 60)
+ */
+export async function computeMetrics(userId: string, retentionDays: number = 60): Promise<ReliabilityMetrics> {
   const now = new Date();
   const cutoff = new Date(now.getTime() - retentionDays * TIME_UNITS.DAY_MS);
 
@@ -49,12 +94,12 @@ export async function computeMetrics(userId: string, retentionDays: number = 30)
     totalWaitlistPromotions,
     abandonedWaitlists,
     explicitCancellations,
-    last5Regs,
+    last5PastRegs,
     acceptedPromotions,
     pastEventCount,
   ] = await Promise.all([
     Registration.countDocuments({ userId }),
-    // A5: Exclude cancelled events from confirmed count
+    // Confirmed count — exclude cancelled events
     Registration.aggregate([
       { $match: { userId: userIdObj, confirmed: true } },
       { $lookup: { from: 'events', localField: 'eventId', foreignField: '_id', as: 'event' } },
@@ -62,7 +107,7 @@ export async function computeMetrics(userId: string, retentionDays: number = 30)
       { $match: { 'event.isCancelled': { $ne: true } } },
       { $count: 'total' },
     ]).then(r => r[0]?.total ?? 0),
-    // A5: Exclude cancelled events from checked-in count
+    // Checked-in count — exclude cancelled events
     Registration.aggregate([
       { $match: { userId: userIdObj, checkedIn: true } },
       { $lookup: { from: 'events', localField: 'eventId', foreignField: '_id', as: 'event' } },
@@ -76,13 +121,27 @@ export async function computeMetrics(userId: string, retentionDays: number = 30)
       createdAt: { $gte: cutoff },
     }),
     Registration.countDocuments({ userId, promotedFromWaitlist: true }),
-    Waitlist.countDocuments({ userId, abandonedAt: { $ne: null } }),
+    // True abandonments: left waitlist without being promoted
+    // (promoted records have promotedAt set; abandoned records have abandonedAt set but no promotedAt)
+    Waitlist.countDocuments({
+      userId,
+      abandonedAt: { $ne: null },
+      $or: [
+        { wasPromoted: { $ne: true } },
+        { promotedAt: null },
+      ],
+    }),
     Registration.countDocuments({ userId, cancelledAt: { $ne: null } }),
-    Registration.find({ userId, confirmed: true })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select('checkedIn confirmedAt confirmationEmailSentAt')
-      .lean(),
+    // Last 5 confirmed registrations for PAST events only (for recent attendance + response time)
+    Registration.aggregate([
+      { $match: { userId: userIdObj, confirmed: true } },
+      { $lookup: { from: 'events', localField: 'eventId', foreignField: '_id', as: 'event' } },
+      { $unwind: '$event' },
+      { $match: { 'event.date': { $lt: now }, 'event.isCancelled': { $ne: true } } },
+      { $sort: { 'event.date': -1 } },
+      { $limit: 5 },
+      { $project: { checkedIn: 1, confirmedAt: 1, confirmationEmailSentAt: 1 } },
+    ]),
     Registration.countDocuments({ userId, promotedFromWaitlist: true, confirmed: true }),
     // Count registrations for past events
     Registration.aggregate([
@@ -94,29 +153,29 @@ export async function computeMetrics(userId: string, retentionDays: number = 30)
     ]).then(r => r[0]?.total ?? 0),
   ]);
 
-  // A5: Fixed attendance rate — cancelled events excluded from denominator
+  // Core attendance rate — cancelled events excluded from denominator
   const attendanceRate = totalConfirmed > 0 ? Math.min(totalCheckedIn / totalConfirmed, 1) : 0;
-  // A5: Fixed waitlistAbandonRate — guard against division by zero
+
+  // Waitlist abandon rate — only count TRUE abandonments (not promotions)
   const waitlistAbandonRate = totalWaitlistPromotions > 0
     ? Math.min(abandonedWaitlists / totalWaitlistPromotions, 1)
     : 0;
 
-  // Recent attendance rate (last 5 confirmed registrations)
-  const recentAttendanceRate = last5Regs.length > 0
-    ? last5Regs.filter((r: any) => r.checkedIn).length / last5Regs.length
+  // Recent attendance rate — last 5 PAST events only (excludes future events)
+  const recentAttendanceRate = last5PastRegs.length > 0
+    ? last5PastRegs.filter((r: any) => r.checkedIn).length / last5PastRegs.length
     : attendanceRate;
 
   // Average confirmation response time (hours from email sent to confirmed)
-  const responseTimes = last5Regs
+  const responseTimes = last5PastRegs
     .filter((r: any) => r.confirmedAt && r.confirmationEmailSentAt)
     .map((r: any) =>
-      (new Date(r.confirmedAt).getTime() - new Date(r.confirmationEmailSentAt).getTime()) / WAITLIST_HOUR_DISCOUNT_MS
+      (new Date(r.confirmedAt).getTime() - new Date(r.confirmationEmailSentAt).getTime()) / TIME_UNITS.HOUR_MS
     );
   const avgResponseHours = responseTimes.length > 0
     ? responseTimes.reduce((a: number, b: number) => a + b, 0) / responseTimes.length
     : 12;
 
-  // A1: Count attended events (total checked-in to non-cancelled events)
   const totalAttended = totalCheckedIn;
 
   return {
@@ -133,12 +192,19 @@ export async function computeMetrics(userId: string, retentionDays: number = 30)
   };
 }
 
+// ─── Reliability Isolation Forest ─────────────────────────────────────────────
+
 let reliabilityModel: IsolationForest | null = null;
 let reliabilityModelTrained = false;
 let reliabilityTrainingCount = 0;
+let reliabilityTrainingPromise: Promise<void> | null = null;
 
+/**
+ * Trains the reliability Isolation Forest on all student feature vectors.
+ * Non-blocking: caches the promise to prevent duplicate training runs.
+ */
 export async function trainReliabilityModel(): Promise<void> {
-  await connectDB();
+  await dbConnect();
 
   const users = await User.find({ role: 'student' }, '_id').lean() as { _id: import('mongoose').Types.ObjectId }[];
 
@@ -155,17 +221,9 @@ export async function trainReliabilityModel(): Promise<void> {
       const metrics = await computeMetrics(user._id.toString());
       if (metrics.totalRegistrations < ML_THRESHOLDS.reliability.minRegistrationsToScore) continue;
 
-      const vector = [
-        metrics.attendanceRate,
-        metrics.waitlistAbandonRate,
-        Math.min(metrics.bulkRegistrationScore / 10, 1),
-        metrics.cancellationRate,
-        metrics.recentAttendanceRate,
-        Math.min(metrics.confirmationResponseHours / 48, 1),
-        1 - metrics.waitlistConversionRate,
-      ];
+      const vector = buildFeatureVector(metrics);
 
-      // A8: Skip if any feature is invalid (NaN or Infinity)
+      // Skip if any feature is invalid (NaN or Infinity)
       if (vector.some(v => isNaN(v) || !isFinite(v))) continue;
 
       featureVectors.push(vector);
@@ -208,7 +266,21 @@ export function getReliabilityModelStats() {
   };
 }
 
-function classifyTier(
+// ─── Tier Classification ──────────────────────────────────────────────────────
+
+const TIER_ORDER: EngagementTier[] = ['new', 'unreliable', 'regular', 'champion'];
+
+/**
+ * Classifies a student into an engagement tier based on their metrics and anomaly score.
+ *
+ * Tier logic (checked in order):
+ *   1. If insufficient data (< 3 registrations) → 'new'
+ *   2. If any unreliable trigger fires → 'unreliable'
+ *   3. If ALL champion conditions met → 'champion'
+ *   4. If ALL regular conditions met → 'regular'
+ *   5. Default → 'new'
+ */
+export function classifyTier(
   metrics: ReliabilityMetrics,
   anomalyScore: number
 ): EngagementTier {
@@ -261,15 +333,53 @@ function classifyTier(
   return 'new';
 }
 
-function computeScore(metrics: ReliabilityMetrics, anomalyScore: number): number {
-  if (metrics.totalRegistrations < ML_THRESHOLDS.reliability.minRegistrationsToScore) return 0;
+// ─── Score Computation ────────────────────────────────────────────────────────
 
-  const attendanceComponent = metrics.attendanceRate * 60;
-  const waitlistComponent = (1 - metrics.waitlistAbandonRate) * 25;
-  const mlComponent = (1 - anomalyScore) * 15;
+/**
+ * Computes a 0–100 reliability score from metrics and anomaly score.
+ *
+ * The score uses 7 weighted components:
+ *   - attendance rate (40pts): core signal
+ *   - recent attendance (15pts): trend/recency
+ *   - cancellation rate (10pts): commitment
+ *   - confirmation speed (5pts): responsiveness
+ *   - waitlist behavior (10pts): combo of abandon + conversion
+ *   - anomaly score (15pts): ML signal
+ *   - bulk registration (5pts): anti-gaming
+ *
+ * Returns null if insufficient data (< 3 registrations).
+ */
+export function computeScore(metrics: ReliabilityMetrics, anomalyScore: number): number | null {
+  if (metrics.totalRegistrations < ML_THRESHOLDS.reliability.minRegistrationsToScore) return null;
 
-  return Math.round(Math.min(attendanceComponent + waitlistComponent + mlComponent, 100));
+  const w = MODEL_PARAMS.SCORE_WEIGHTS;
+
+  // Each component is normalized to 0–1 before multiplying by its weight
+  const attendanceComponent = metrics.attendanceRate * w.attendance;
+  const recentComponent = metrics.recentAttendanceRate * w.recentAttendance;
+  const cancellationComponent = (1 - Math.min(metrics.cancellationRate, 1)) * w.cancellation;
+
+  // Confirmation speed: 0h = perfect (1.0), 48h = worst (0.0)
+  const confirmationNorm = Math.min(metrics.confirmationResponseHours / 48, 1);
+  const confirmationComponent = (1 - confirmationNorm) * w.confirmationSpeed;
+
+  // Waitlist behavior: combination of low abandon + high conversion
+  const waitlistBehavior = ((1 - metrics.waitlistAbandonRate) + metrics.waitlistConversionRate) / 2;
+  const waitlistComponent = waitlistBehavior * w.waitlistBehavior;
+
+  const anomalyComponent = (1 - Math.min(anomalyScore, 1)) * w.anomaly;
+
+  // Bulk registration: 0 = good (1.0), 10+ = bad (0.0)
+  const bulkRegNorm = Math.min(metrics.bulkRegistrationScore / 10, 1);
+  const bulkComponent = (1 - bulkRegNorm) * w.bulkRegistration;
+
+  const raw = attendanceComponent + recentComponent + cancellationComponent +
+              confirmationComponent + waitlistComponent + anomalyComponent + bulkComponent;
+
+  return Math.round(Math.min(Math.max(raw, 0), 100));
 }
+
+// ─── Tier Benefits ────────────────────────────────────────────────────────────
 
 export function getTierBenefits(tier: EngagementTier): {
   confirmationWindowHours: number;
@@ -284,15 +394,61 @@ export function getTierBenefits(tier: EngagementTier): {
   };
 }
 
+// ─── Per-User Mutex ───────────────────────────────────────────────────────────
+
+/** Prevents concurrent reliability updates for the same user.
+ *  If a new update is requested while one is in-flight, it is deferred
+ *  and re-triggered after the current one finishes. */
+const inflightUpdates = new Map<string, Promise<ReliabilityResult | null>>();
+const pendingRetries = new Map<string, boolean>();
+
+// ─── Main Update Function ─────────────────────────────────────────────────────
+
+/**
+ * Recomputes and persists the reliability score and tier for a student.
+ *
+ * Called fire-and-forget after every write event (register, check-in, cancel, waitlist leave).
+ * Uses a per-user mutex: if an update is already in-flight, a re-run is scheduled
+ * after the current one finishes so no updates are lost.
+ *
+ * @param userId - Student user ID to update
+ * @returns The computed reliability result, or null if skipped
+ */
 export async function updateStudentReliability(userId: string): Promise<ReliabilityResult | null> {
+  // If an update is already in-flight, defer a re-run instead of skipping
+  if (inflightUpdates.has(userId)) {
+    pendingRetries.set(userId, true);
+    return inflightUpdates.get(userId);
+  }
+
+  const promise = _doUpdateReliability(userId);
+  inflightUpdates.set(userId, promise);
+
+  promise.finally(async () => {
+    inflightUpdates.delete(userId);
+    // If a retry was requested while we were running, run again with fresh data
+    if (pendingRetries.has(userId)) {
+      pendingRetries.delete(userId);
+      // Small delay to let DB writes from the previous run propagate
+      await new Promise(r => setTimeout(r, 100));
+      void updateStudentReliability(userId).catch(err =>
+        console.error('[Reliability] Deferred update failed:', err)
+      );
+    }
+  });
+
+  return promise;
+}
+
+async function _doUpdateReliability(userId: string): Promise<ReliabilityResult | null> {
   const prevUser = await User.findById(userId).select('reliabilityScore engagementTier adminOverriddenTier').lean();
   const prevData = prevUser as any;
 
   const prevTier = prevData?.engagementTier ?? 'new';
-  const retentionDays = MODEL_PARAMS.RETENTION_DAYS[prevTier] ?? 30;
+  const retentionDays = MODEL_PARAMS.RETENTION_DAYS[prevTier] ?? 60;
   const metrics = await computeMetrics(userId, retentionDays);
 
-  // Guard: if no registrations found, don't recalculate (prevents spurious score drops)
+  // Guard: if no registrations found, don't recalculate
   if (metrics.totalRegistrations === 0) {
     console.warn(`[Reliability] Skipping update for ${userId} — 0 registrations found`);
     const benefits = getTierBenefits(prevTier);
@@ -306,69 +462,45 @@ export async function updateStudentReliability(userId: string): Promise<Reliabil
     };
   }
 
-  const TIER_ORDER: EngagementTier[] = ['new', 'unreliable', 'regular', 'champion'];
   const wasAdminOverridden = prevData?.adminOverriddenTier ?? false;
 
   let anomalyScore = 0;
 
-  // Inline training if model not ready yet (startup training may still be running)
+  // Non-blocking: if reliability model isn't ready, start training in background
   if (!isReliabilityModelReady()) {
-    try {
-      await trainReliabilityModel();
-    } catch (err) {
-      console.error('[ReliabilityIF] Inline training failed:', err);
+    if (!reliabilityTrainingPromise) {
+      reliabilityTrainingPromise = trainReliabilityModel().finally(() => {
+        reliabilityTrainingPromise = null;
+      });
     }
+    // Skip anomaly scoring — use heuristic-based tier classification
   }
 
   if (isReliabilityModelReady() && metrics.totalRegistrations >= ML_THRESHOLDS.reliability.minRegistrationsToScore) {
     try {
-      anomalyScore = reliabilityModel!.anomalyScore([
-        metrics.attendanceRate,
-        metrics.waitlistAbandonRate,
-        Math.min(metrics.bulkRegistrationScore / 10, 1),
-        metrics.cancellationRate,
-        metrics.recentAttendanceRate,
-        Math.min(metrics.confirmationResponseHours / 48, 1),
-        1 - metrics.waitlistConversionRate,
-      ]);
+      anomalyScore = reliabilityModel!.anomalyScore(buildFeatureVector(metrics));
     } catch (err) {
       console.error('[ReliabilityIF] Scoring failed:', err);
       anomalyScore = 0;
     }
   }
 
+  // Admin override is absolute — don't touch tier/score while active
+  if (wasAdminOverridden) {
+    const benefits = getTierBenefits(prevTier);
+    return {
+      tier: prevTier,
+      score: prevData?.reliabilityScore ?? 0,
+      anomalyScore: 0,
+      metrics,
+      confirmationWindowHours: benefits.confirmationWindowHours,
+      waitlistMultiplier: benefits.waitlistMultiplier,
+    };
+  }
+
   const tier = classifyTier(metrics, anomalyScore);
   const score = computeScore(metrics, anomalyScore);
   const benefits = getTierBenefits(tier);
-
-  // Re-check if admin overrode during our computation (race condition guard)
-  // Only block if new tier would DOWNGRADE the student; allow upgrades
-  const freshUser = await User.findById(userId).select('adminOverriddenTier engagementTier reliabilityScore').lean();
-  const freshData = freshUser as any;
-  if (freshData?.adminOverriddenTier) {
-    const existingTier = freshData.engagementTier ?? 'new';
-    const existingIdx = TIER_ORDER.indexOf(existingTier);
-    const newIdx = TIER_ORDER.indexOf(tier);
-    if (newIdx >= existingIdx) {
-      // Upgrade or same tier — allow it and clear override
-      // (falls through to the write below)
-    } else {
-      // Downgrade — keep admin's values
-      const existingScore = freshData.reliabilityScore ?? 0;
-      const existingBenefits = getTierBenefits(existingTier);
-      return {
-        tier: existingTier,
-        score: existingScore,
-        anomalyScore: 0,
-        metrics,
-        confirmationWindowHours: existingBenefits.confirmationWindowHours,
-        waitlistMultiplier: existingBenefits.waitlistMultiplier,
-      };
-    }
-  }
-
-  const prevScore = (prevUser as any)?.reliabilityScore ?? 0;
-  const scoreDiff = Math.abs((score ?? 0) - prevScore);
 
   const historyEntry = {
     score: score ?? 0,
@@ -379,7 +511,7 @@ export async function updateStudentReliability(userId: string): Promise<Reliabil
 
   const updateData: Record<string, any> = {
     engagementTier: tier,
-    reliabilityScore: metrics.totalRegistrations >= ML_THRESHOLDS.reliability.minRegistrationsToScore ? score : null,
+    reliabilityScore: score,
     $push: {
       scoreHistory: {
         $each: [historyEntry],
@@ -389,24 +521,20 @@ export async function updateStudentReliability(userId: string): Promise<Reliabil
     },
   };
 
-  // If admin overrode but student upgraded, clear the override flag
-  if (wasAdminOverridden) {
-    updateData.adminOverriddenTier = false;
-    updateData.adminOverriddenAt = null;
-  }
-
   await User.findByIdAndUpdate(userId, updateData)
     .catch(err => console.error('[Reliability] Failed to save tier:', err));
 
   return {
     tier,
-    score,
+    score: score ?? 0,
     anomalyScore: Math.round(anomalyScore * 1000) / 1000,
     metrics,
     confirmationWindowHours: benefits.confirmationWindowHours,
     waitlistMultiplier: benefits.waitlistMultiplier,
   };
 }
+
+// ─── Score Change Reason Builder ──────────────────────────────────────────────
 
 let updatesSinceRetrain = 0;
 
@@ -416,16 +544,15 @@ function buildScoreChangeReason(
   anomalyScore: number
 ): string {
   const champRate = Math.round(TIER_CONFIG.champion.minAttendanceRate * 100);
-  const regRate = Math.round(TIER_CONFIG.regular.minAttendanceRate * 100);
   const attendedPct = Math.round(metrics.attendanceRate * 100);
   const hasPastEvents = metrics.pastEventCount > 0;
 
-  // Guard: no past events yet — all registrations are future
+  // Guard: no past events yet
   if (!hasPastEvents && metrics.totalAttended === 0 && metrics.totalRegistrations >= ML_THRESHOLDS.reliability.minRegistrationsToScore) {
     return `${metrics.totalRegistrations} registrations (all future events) — score pending attendance data`;
   }
 
-  // Unreliable reasons (highest priority — check these first)
+  // Unreliable reasons (highest priority)
   if (hasPastEvents && metrics.attendanceRate < ML_THRESHOLDS.reliability.unreliableMaxAttendance) {
     return `Attendance ${attendedPct}% (below ${Math.round(ML_THRESHOLDS.reliability.unreliableMaxAttendance * 100)}%) — classified as Unreliable`;
   }

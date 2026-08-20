@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useLayoutEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { cacheGet, cacheSet } from '@/lib/client-cache';
 import { useSession } from "next-auth/react";
@@ -94,7 +94,7 @@ export default function EventDetailPage() {
   const [leaveWaitlistModal, setLeaveWaitlistModal] = useState(false);
   const [leavingWaitlist, setLeavingWaitlist] = useState(false);
   // Hydrate event from cache before first paint (synchronous)
-  useLayoutEffect(() => {
+  useEffect(() => {
     const cached = cacheGet<any>(`event_detail_${id}`)
     if (cached) {
       setEvent(cached);
@@ -199,6 +199,30 @@ export default function EventDetailPage() {
               championsAhead: data.championsAhead,
               priorityNote: data.priorityNote,
             });
+          } else {
+            // Promoted or removed — refresh registration state
+            setWaitlisted(false);
+            setWaitlistInfo(null);
+            fetch('/api/registrations')
+              .then(r => r.json())
+              .then(d => {
+                const regs = d.registrations || [];
+                const hasReg = regs.some((reg: any) => {
+                  const eid = typeof reg.eventId === 'object' ? reg.eventId?._id?.toString() : reg.eventId?.toString();
+                  return eid === id?.toString();
+                });
+                if (hasReg) {
+                  setRegistered(true);
+                  const existingReg = regs.find((reg: any) => {
+                    const eid = typeof reg.eventId === 'object' ? reg.eventId?._id?.toString() : reg.eventId?.toString();
+                    return eid === id?.toString();
+                  });
+                  if (existingReg?.confirmed && existingReg?.qrCode) setQrCode(existingReg.qrCode);
+                  if (existingReg?.registrationId) setRegistrationId(existingReg.registrationId);
+                  toast.success("You've been promoted! You are now registered for this event.");
+                }
+              })
+              .catch(() => {});
           }
         })
         .catch(err => console.error(err));
@@ -890,8 +914,15 @@ export default function EventDetailPage() {
                           <button
                             onClick={handleNotifyMe}
                             disabled={registering || banStatusLoading}
-                            className="btn-secondary"
-                            style={{ width: '100%', fontSize: 16, padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                            className="w-full py-3 rounded-xl font-semibold text-sm transition-all
+                                       flex items-center justify-center gap-2 disabled:opacity-50
+                                       disabled:cursor-not-allowed"
+                            style={{
+                              background: 'rgba(99,102,241,0.15)',
+                              border: '1px solid rgba(99,102,241,0.4)',
+                              color: '#818cf8',
+                              boxShadow: '0 0 20px rgba(99,102,241,0.05)',
+                            }}
                           >
                             {registering ? 'Saving...' : 'Notify Me When Available'}
                           </button>

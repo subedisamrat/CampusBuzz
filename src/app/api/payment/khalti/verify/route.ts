@@ -20,6 +20,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
     }
 
+    if (payment.userId.toString() !== session.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     if (payment.status === 'completed') {
       return NextResponse.json({ success: true, message: 'Payment already verified' });
     }
@@ -37,8 +41,8 @@ export async function POST(req: NextRequest) {
     await completeRegistration(paymentId, userId, eventId);
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    console.error('[API /payment/khalti/verify]', err);
-    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+  } catch {
+    console.error('[API /payment/khalti/verify] Server error');
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }

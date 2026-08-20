@@ -29,12 +29,6 @@ const F = {
 
 // ── Cache: avoid re-computing for the same registration ───────────────────
 const reasonCache = new Map<string, string>();
-// Clear every hour so stale data doesn't persist indefinitely
-const _cacheCleanupInterval = setInterval(() => reasonCache.clear(), 60 * 60 * 1000);
-// Allow Node.js to exit even if this interval is pending
-if (typeof _cacheCleanupInterval === 'object' && _cacheCleanupInterval.unref) {
-  _cacheCleanupInterval.unref();
-}
 
 // ── Template filler ────────────────────────────────────────────────────────
 function fill(template: string, vars: Record<string, string | number>): string {
@@ -228,14 +222,3 @@ export function generateFlagReason(
   return reason;
 }
 
-// ── Convenience wrapper for async contexts ────────────────────────────────
-// Maintains the same async signature as the old implementation so all
-// existing callers (checkin/route.ts etc.) need zero changes.
-export async function generateFlagReasonAsync(
-  features: number[],
-  anomalyScore: number,
-  severity: 'flagged' | 'blocked',
-  registrationId?: string
-): Promise<string> {
-  return generateFlagReason(features, anomalyScore, severity, registrationId);
-}

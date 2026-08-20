@@ -69,6 +69,7 @@ export async function DELETE(req: NextRequest) {
 
     await dbConnect();
     const { eventId } = await req.json();
+    if (!eventId) return NextResponse.json({ error: 'eventId required' }, { status: 400 });
     await EventInterest.deleteOne({ userId: session.user.id, eventId });
     return NextResponse.json({ success: true });
   } catch (err) {

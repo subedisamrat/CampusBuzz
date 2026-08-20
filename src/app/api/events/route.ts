@@ -4,6 +4,10 @@ import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Event from '@/models/Event';
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
@@ -14,7 +18,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status');
     const query: Record<string, unknown> = { isActive: true };
     if (category && category !== 'All') query.category = category;
-    if (search) query.title = { $regex: search, $options: 'i' };
+    if (search) query.title = { $regex: escapeRegex(search), $options: 'i' };
     if (status === 'ended') {
       query.date = { $lt: new Date() };
     } else {
@@ -26,12 +30,6 @@ export async function GET(req: NextRequest) {
     }
 
     const events: any = await Event.find(query).sort({ date: 1 }).lean();
-
-    // Fire-and-forget reminder + auto-confirm — never blocks response
-    void import('@/lib/reminders').then(({ autoTriggerConfirmations, sendPendingReminders }) => {
-      autoTriggerConfirmations();
-      sendPendingReminders();
-    }).catch(err => console.error(err));
 
     return NextResponse.json(events);
   } catch (err) {

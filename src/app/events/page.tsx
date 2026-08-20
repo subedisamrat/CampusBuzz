@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useLayoutEffect, useCallback, Suspense } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { cacheGet, cacheSet } from '@/lib/client-cache'
@@ -58,10 +58,12 @@ function EventsContent() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [waitlistedEventIds, setWaitlistedEventIds] = useState<Set<string>>(new Set())
+  const [interestedEventIds, setInterestedEventIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [regLoading, setRegLoading] = useState(true)
   const [totalEvents, setTotalEvents] = useState(0)
   const [searchInput, setSearchInput] = useState(search)
+  const abortRef = useRef<AbortController | null>(null)
 
   const updateFilters = useCallback((newSearch: string, newCategory: string, newStatus: string, newFee: string) => {
     const params = new URLSearchParams()
@@ -81,30 +83,44 @@ function EventsContent() {
   }, [searchInput])
 
   // Hydrate registrations from cache before first paint (synchronous)
-  useLayoutEffect(() => {
+  useEffect(() => {
     const r = cacheGet<Registration[]>('events_registrations')
     if (r) { setRegistrations(r); setRegLoading(false) }
   }, [])
 
   useEffect(() => {
-    fetchEvents()
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    fetchEvents(controller.signal).catch(() => {})
     if (session) {
-      fetch('/api/recommendations')
+      fetch('/api/recommendations', { signal: controller.signal })
         .then(r => r.json())
         .then(d => {
           if (d.recommendations) setRecommendations(d.recommendations)
         })
-        .catch(err => console.error(err));
+        .catch(err => { if (err.name !== 'AbortError') console.error(err) });
       fetchRegistrations()
-      fetch('/api/waitlist/my')
+      fetch('/api/waitlist/my', { signal: controller.signal })
         .then(r => r.json())
         .then(d => {
           if (d.entries) {
             setWaitlistedEventIds(new Set(d.entries.map((e: any) => e.eventId)))
           }
         })
-        .catch(err => console.error(err));
+        .catch(err => { if (err.name !== 'AbortError') console.error(err) });
+      fetch('/api/event-interest/my', { signal: controller.signal })
+        .then(r => r.json())
+        .then(d => {
+          if (d.entries) {
+            setInterestedEventIds(new Set(d.entries.map((e: any) => e.eventId)))
+          }
+        })
+        .catch(err => { if (err.name !== 'AbortError') console.error(err) });
     }
+
+    return () => controller.abort()
   }, [session, search, category, statusFilter, feeFilter])
 
   async function fetchRegistrations() {
@@ -120,7 +136,7 @@ function EventsContent() {
     }
   }
 
-  async function fetchEvents() {
+  async function fetchEvents(signal?: AbortSignal) {
     setLoading(true)
     const params = new URLSearchParams()
     if (search) params.set('search', search)
@@ -128,33 +144,39 @@ function EventsContent() {
     if (statusFilter === 'ended') params.set('status', 'ended')
     if (feeFilter !== 'all') params.set('fee', feeFilter)
 
-    const res = await fetch(`/api/events?${params}`)
-    const data = await res.json()
-    const allEvents: Event[] = Array.isArray(data) ? data : []
-    setTotalEvents(allEvents.length)
+    try {
+      const res = await fetch(`/api/events?${params}`, { signal })
+      const data = await res.json()
+      const allEvents: Event[] = Array.isArray(data) ? data : []
+      setTotalEvents(allEvents.length)
 
-    let filtered = allEvents
+      let filtered = allEvents
 
-    if (feeFilter === 'free') {
-      filtered = filtered.filter(e => e.feeType === 'free')
-    } else if (feeFilter === 'paid') {
-      filtered = filtered.filter(e => e.feeType === 'paid')
+      if (feeFilter === 'free') {
+        filtered = filtered.filter(e => e.feeType === 'free')
+      } else if (feeFilter === 'paid') {
+        filtered = filtered.filter(e => e.feeType === 'paid')
+      }
+
+      const now = new Date()
+
+      if (statusFilter !== 'ended') {
+        filtered = filtered
+          .filter(e => new Date(e.date) >= now)
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      }
+
+      if (isGuest) {
+        filtered = filtered.slice(0, PAGINATION.LANDING_EVENTS_GUEST)
+      }
+
+      setEvents(filtered)
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
-
-    const now = new Date()
-
-    if (statusFilter !== 'ended') {
-      filtered = filtered
-        .filter(e => new Date(e.date) >= now)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    }
-
-    if (isGuest) {
-      filtered = filtered.slice(0, PAGINATION.LANDING_EVENTS_GUEST)
-    }
-
-    setEvents(filtered)
-    setLoading(false)
   }
 
 
@@ -344,7 +366,7 @@ function EventsContent() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {events.map((event, i) => (
-                  <EventCard key={event._id} event={event} index={i} registered={registrations.some(r => r.eventId?._id === event._id)} waitlisted={waitlistedEventIds.has(event._id)} />
+                  <EventCard key={event._id} event={event} index={i} registered={registrations.some(r => r.eventId?._id === event._id)} waitlisted={waitlistedEventIds.has(event._id)} interested={interestedEventIds.has(event._id)} />
                 ))}
               </div>
             )}

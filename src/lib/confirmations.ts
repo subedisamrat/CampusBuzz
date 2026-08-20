@@ -10,7 +10,7 @@
 // dependent. Direct import is faster and works in all environments.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import Registration from '@/models/Registration';
 import Event from '@/models/Event';
 import User from '@/models/User';
@@ -77,7 +77,7 @@ export async function sendConfirmationsForEvent(
 ): Promise<SendConfirmationsResult> {
   const { force = false } = options;
 
-  await connectDB();
+  await dbConnect();
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
   const now    = new Date();

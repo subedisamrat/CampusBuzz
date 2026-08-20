@@ -11,6 +11,14 @@ export function rateLimit(
   windowMs: number
 ): { allowed: boolean; remaining: number } {
   const now = Date.now();
+
+  // Evict expired entries lazily (avoids setInterval which is useless on serverless)
+  if (store.size > 1000) {
+    for (const [k, entry] of store.entries()) {
+      if (now > entry.resetAt) store.delete(k);
+    }
+  }
+
   const entry = store.get(key);
 
   if (!entry || now > entry.resetAt) {
@@ -25,10 +33,3 @@ export function rateLimit(
   entry.count++;
   return { allowed: true, remaining: maxRequests - entry.count };
 }
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of store.entries()) {
-    if (now > entry.resetAt) store.delete(key);
-  }
-}, 5 * 60 * 1000);

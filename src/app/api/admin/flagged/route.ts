@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import Registration from '@/models/Registration';
 
 export async function GET(req: NextRequest) {
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectDB();
+    await dbConnect();
 
     const includeAll = req.nextUrl.searchParams.get('include') === 'all';
 
@@ -54,7 +54,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await connectDB();
+    await dbConnect();
     const { registrationId, action, adminNote } = await req.json();
 
     if (!registrationId || !action) {
@@ -62,7 +62,7 @@ export async function PATCH(req: Request) {
     }
 
     if (action === 'approve') {
-      await Registration.findOneAndUpdate(
+      const result = await Registration.findOneAndUpdate(
         { registrationId },
         {
           checkedIn: true,
@@ -74,11 +74,12 @@ export async function PATCH(req: Request) {
           reviewedAt: new Date(),
         }
       );
+      if (!result) return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
       return NextResponse.json({ success: true, action: 'approved' });
     }
 
     if (action === 'deny') {
-      await Registration.findOneAndUpdate(
+      const result = await Registration.findOneAndUpdate(
         { registrationId },
         {
           checkedIn: false,
@@ -91,11 +92,12 @@ export async function PATCH(req: Request) {
           reviewedAt: new Date(),
         }
       );
+      if (!result) return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
       return NextResponse.json({ success: true, action: 'denied' });
     }
 
     if (action === 'reinstate') {
-      await Registration.findOneAndUpdate(
+      const result = await Registration.findOneAndUpdate(
         { registrationId },
         {
           reviewStatus: 'pending',
@@ -105,6 +107,7 @@ export async function PATCH(req: Request) {
           $unset: { adminNote: '', reviewedBy: '', reviewedAt: '' },
         }
       );
+      if (!result) return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
       return NextResponse.json({ success: true, action: 'reinstated' });
     }
 

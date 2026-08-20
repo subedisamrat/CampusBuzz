@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import dbConnect from '@/lib/mongodb';
 import Event from '@/models/Event';
 import Registration from '@/models/Registration';
 import { sendConfirmationsForEvent } from '@/lib/confirmations';
@@ -14,7 +14,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await connectDB();
+    await dbConnect();
     const { searchParams } = new URL(req.url);
     const eventId = searchParams.get('eventId');
 
