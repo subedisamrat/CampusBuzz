@@ -122,7 +122,7 @@ export async function GET(req: Request) {
     const aheadUserTiers = aheadUsers.length > 0
       ? (await User.find({ _id: { $in: aheadUsers.map(e => e.userId) } })
           .select('engagementTier')
-          .lean() as any[]).map((u: any) => u?.engagementTier ?? 'new')
+          .lean().then(r => (r as any[]).map((u: any) => u?.engagementTier ?? 'new'))
       : [];
 
     const championsAhead = aheadUserTiers.filter(t => t === 'champion').length;

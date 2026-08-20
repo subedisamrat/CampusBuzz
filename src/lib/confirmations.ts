@@ -94,7 +94,7 @@ export async function sendConfirmationsForEvent(
       isActive:    true,
       isCancelled: { $ne: true },
       date:        { $gte: now },
-    }).select('title date venue isActive isCancelled').lean() as any[];
+    }).select('title date venue isActive isCancelled').lean().then(r => r as any[]);
   }
 
   let totalSent        = 0;
@@ -118,7 +118,7 @@ export async function sendConfirmationsForEvent(
       eventId:                event._id,
       confirmed:              false,
       confirmationEmailSent:  false,
-    }).lean() as any[];
+    }).lean().then(r => r as any[]);
 
     if (registrations.length === 0) continue;
 

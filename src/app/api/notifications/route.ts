@@ -42,13 +42,13 @@ export async function GET() {
       User.findById(userId).select('isBanned banReason bannedAt').lean() as any,
       Registration.find({ userId: userIdObj })
         .populate('eventId', 'title date endDate venue feeType')
-        .lean() as any[],
+        .lean().then(r => r as any[]),
       Waitlist.find({ userId: userIdObj, abandonedAt: null })
         .populate('eventId', 'title date venue feeType capacity registeredCount')
-        .lean() as any[],
+        .lean().then(r => r as any[]),
       EventInterest.find({ userId: userIdObj })
         .populate('eventId', 'title date feeAmount registeredCount capacity')
-        .lean() as any[],
+        .lean().then(r => r as any[]),
       Notification.find({
         userId: userIdObj,
         $or: [
@@ -58,7 +58,7 @@ export async function GET() {
       })
         .sort({ createdAt: -1 })
         .limit(50)
-        .lean() as any[],
+        .lean().then(r => r as any[]),
     ]);
 
     // ── Build live notifications ───────────────────────────────────────────────

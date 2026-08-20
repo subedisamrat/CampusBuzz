@@ -58,7 +58,7 @@ export async function getActivityLog(
   const entries = await ActivityLog.find(query)
     .sort({ createdAt: -1, _id: -1 })
     .limit(limit + 1)
-    .lean() as any[];
+    .lean().then(r => r as any[]);
 
   const hasMore = entries.length > limit;
   const items = hasMore ? entries.slice(0, limit) : entries;

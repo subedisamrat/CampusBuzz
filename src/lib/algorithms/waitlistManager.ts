@@ -57,7 +57,7 @@ export async function getSortedWaitlist(eventId: string): Promise<Array<{
   const entries = await Waitlist.find({
     eventId,
     abandonedAt: null,
-  }).lean() as any[];
+  }).lean().then(r => r as any[]);
 
   if (entries.length === 0) return [];
 
@@ -65,7 +65,7 @@ export async function getSortedWaitlist(eventId: string): Promise<Array<{
 
   const users = await User.find({ _id: { $in: userIds } })
     .select('engagementTier')
-    .lean() as any[];
+    .lean().then(r => r as any[]);
   const tierMap = new Map<string, string>(
     users.map((u: any) => [u._id.toString(), u.engagementTier ?? 'new'])
   );
