@@ -76,8 +76,8 @@ export default function AdminStudentsPage() {
 
   if (loading) {
     return (
-      <div className="p-6 animate-pulse">
-        <div className="w-48 h-8 bg-white/[0.07] rounded-lg mb-6" />
+      <div className="p-4 sm:p-6 animate-pulse">
+        <div className="w-36 sm:w-48 h-6 sm:h-8 bg-white/[0.07] rounded-lg mb-4 sm:mb-6" />
         <div className="w-full h-12 bg-white/[0.04] rounded-xl mb-4" />
         <div className="flex gap-2 mb-6">
           {[1,2,3,4,5,6].map(i => <div key={i} className="w-24 h-8 bg-white/[0.05] rounded-full" />)}
@@ -97,17 +97,17 @@ export default function AdminStudentsPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <TitleSetter title="Students" />
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500/30 to-emerald-500/20 flex items-center justify-center ring-1 ring-teal-500/30">
-          <Users className="w-7 h-7 text-teal-400" />
+      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-teal-500/30 to-emerald-500/20 flex items-center justify-center ring-1 ring-teal-500/30">
+          <Users className="w-5 h-5 sm:w-7 sm:h-7 text-teal-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-extrabold text-white">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-white">
             Students
           </h1>
-          <p className="text-sm text-muted-foreground">{students.length} total students</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">{students.length} total students</p>
         </div>
       </div>
 
@@ -168,59 +168,59 @@ export default function AdminStudentsPage() {
               <Link
                 key={student._id}
                 href={`/admin/students/${student._id}`}
-                className="block card p-4 hover:border-teal-500/30 transition-colors"
+                className="block card p-3 sm:p-4 hover:border-teal-500/30 transition-colors overflow-hidden"
               >
-                <div className="flex items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
-                  <div className="w-10 h-10 rounded-full bg-teal-500/10 flex items-center justify-center text-sm font-bold text-teal-400 flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-teal-500/10 flex items-center justify-center text-xs sm:text-sm font-bold text-teal-400 flex-shrink-0">
                     {student.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold text-white truncate">{student.name}</span>
+                      <span className="font-semibold text-sm sm:text-base text-white truncate">{student.name}</span>
                       {student.isBanned && (
                         <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500/20 text-red-400 rounded">BANNED</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 truncate">{student.email}</p>
+                    <p className="text-[11px] sm:text-xs text-gray-500 truncate">{student.email}</p>
                   </div>
-                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                  <TierBadge tier={student.engagementTier as 'champion' | 'regular' | 'new' | 'unreliable'} />
-                  <div className="hidden sm:flex items-center gap-4 pl-3 border-l border-white/10">
-                    {/* Score */}
-                    <div className="text-center min-w-[44px]">
-                      <div className={`text-base font-extrabold ${
-                        student.reliabilityScore !== null
-                          ? student.reliabilityScore >= 70 ? 'text-teal-400'
-                            : student.reliabilityScore >= 40 ? 'text-amber-400'
-                            : 'text-red-400'
-                          : 'text-gray-500'
-                      }`}>
-                        {student.reliabilityScore ?? '—'}
+                  <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                    <TierBadge tier={student.engagementTier as 'champion' | 'regular' | 'new' | 'unreliable'} />
+                    <div className="hidden sm:flex items-center gap-4 pl-3 border-l border-white/10">
+                      {/* Score */}
+                      <div className="text-center min-w-[44px]">
+                        <div className={`text-base font-extrabold ${
+                          student.reliabilityScore !== null
+                            ? student.reliabilityScore >= 70 ? 'text-teal-400'
+                              : student.reliabilityScore >= 40 ? 'text-amber-400'
+                              : 'text-red-400'
+                            : 'text-gray-500'
+                        }`}>
+                          {student.reliabilityScore ?? '—'}
+                        </div>
+                        <div className="text-[10px] text-gray-500 font-medium tracking-wide uppercase mt-0.5">Score</div>
                       </div>
-                      <div className="text-[10px] text-gray-500 font-medium tracking-wide uppercase mt-0.5">Score</div>
-                    </div>
-                    {/* Registered */}
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center">
-                        <Calendar size={14} className="text-teal-400" />
+                      {/* Registered */}
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                          <Calendar size={14} className="text-teal-400" />
+                        </div>
+                        <div className="text-left">
+                          <div className="text-sm font-bold text-white leading-tight">{student.totalRegistrations}</div>
+                          <div className="text-[10px] text-gray-500 leading-tight">Registered</div>
+                        </div>
                       </div>
-                      <div className="text-left">
-                        <div className="text-sm font-bold text-white leading-tight">{student.totalRegistrations}</div>
-                        <div className="text-[10px] text-gray-500 leading-tight">Registered</div>
-                      </div>
-                    </div>
-                    {/* Attended */}
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center">
-                        <UserCheck size={14} className="text-teal-400" />
-                      </div>
-                      <div className="text-left">
-                        <div className="text-sm font-bold text-white leading-tight">{student.totalAttended}</div>
-                        <div className="text-[10px] text-gray-500 leading-tight">Attended</div>
+                      {/* Attended */}
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                          <UserCheck size={14} className="text-teal-400" />
+                        </div>
+                        <div className="text-left">
+                          <div className="text-sm font-bold text-white leading-tight">{student.totalAttended}</div>
+                          <div className="text-[10px] text-gray-500 leading-tight">Attended</div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
                 </div>
               </Link>
             ))}

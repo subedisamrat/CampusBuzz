@@ -128,7 +128,7 @@ const AdminSidebar = memo(function AdminSidebar({
         </div>
       </aside>
 
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-surface border-b border-border px-4 h-16 flex items-center justify-between">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 px-4 h-16 flex items-center justify-between" style={{ background: 'rgba(5, 13, 12, 0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <Link href="/admin/dashboard" className="flex items-center gap-2">
           <div className="w-8 h-8 shrink-0 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
             <Zap size={16} className="text-teal-950 fill-teal-950" />

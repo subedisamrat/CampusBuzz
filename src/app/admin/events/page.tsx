@@ -134,7 +134,7 @@ export default function AdminEventsPage() {
 
   if (loading) return (
     <div className="min-h-screen animate-pulse">
-      <div className="max-w-[1200px] mx-auto px-6 py-12">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-12">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-2">
@@ -193,8 +193,8 @@ export default function AdminEventsPage() {
   return (
     <div className="min-h-screen">
       <TitleSetter title="Events" />
-      <div className="max-w-[1200px] mx-auto px-6 py-12">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-[clamp(24px,4vw,36px)] font-extrabold tracking-tighter text-white">
               All <span className="text-accent">Events</span>
@@ -219,8 +219,8 @@ export default function AdminEventsPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 bg-surface border border-border rounded-lg p-2 mb-6">
-          <div className="flex items-center gap-2 pl-2 border-r border-border pr-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-surface border border-border rounded-lg p-2 mb-4 sm:mb-6 w-full sm:w-auto">
+          <div className="flex items-center gap-2 pl-2 sm:border-r sm:border-border sm:pr-3">
             <Filter size={16} className="text-muted-foreground" />
             <span className="text-sm font-semibold text-muted-foreground">Filters</span>
           </div>
@@ -268,7 +268,7 @@ export default function AdminEventsPage() {
               <tbody className="divide-y divide-border">
                 {currentEvents.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-16 text-center">
+                    <td colSpan={7} className="px-4 sm:px-6 py-12 sm:py-16 text-center">
                       <Calendar size={40} className="text-muted-foreground mx-auto mb-3 opacity-40" />
                       <p className="text-muted-foreground">No events found</p>
                       <Link href="/admin/events/new" className="btn-primary inline-flex items-center gap-2 mt-4">

@@ -41,8 +41,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${syne.variable} ${spaceMono.variable}`}>
-      <body>
+    <html lang="en" className={`overflow-x-hidden ${inter.variable} ${syne.variable} ${spaceMono.variable}`}>
+      <body className="overflow-x-hidden">
         <Providers>
           <BannedOverlay />
           <BanLiftedOverlay />

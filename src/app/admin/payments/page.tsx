@@ -155,65 +155,65 @@ export default function AdminPaymentsPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <TitleSetter title="Payments" />
           {/* Header */}
-          <div className="flex items-center gap-3 mb-8 mt-7">
-            <div className="w-14 h-14 rounded-2xl bg-purple-600/20 flex items-center justify-center">
-              <CreditCard className="w-7 h-7 text-purple-400" />
+          <div className="flex items-center gap-3 mb-6 sm:mb-8 mt-5 sm:mt-7">
+            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-purple-600/20 flex items-center justify-center">
+              <CreditCard className="w-5 h-5 sm:w-7 sm:h-7 text-purple-400" />
             </div>
             <div>
-              <h1 className="font-display font-extrabold text-3xl">
+              <h1 className="font-display font-extrabold text-xl sm:text-3xl">
                 Payment <span className="gradient-text">Reports</span>
               </h1>
-              <p className="text-gray-400 text-sm">Monitor all transactions and refunds</p>
+              <p className="text-gray-400 text-xs sm:text-sm">Monitor all transactions and refunds</p>
             </div>
           </div>
 
           {/* Stats Cards */}
           {stats && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              <div className="card p-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-green-400" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <div className="card p-3 sm:p-5">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-green-500/20 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wider">Total Revenue</p>
-                    <p className="text-2xl font-bold text-white">Rs. {stats.totalAmount.toLocaleString()}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider">Total Revenue</p>
+                    <p className="text-base sm:text-2xl font-bold text-white">Rs. {stats.totalAmount.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
               
-              <div className="card p-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-blue-400" />
+              <div className="card p-3 sm:p-5">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wider">Completed</p>
-                    <p className="text-2xl font-bold text-white">{stats.completed}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider">Completed</p>
+                    <p className="text-base sm:text-2xl font-bold text-white">{stats.completed}</p>
                   </div>
                 </div>
               </div>
               
-              <div className="card p-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-yellow-400" />
+              <div className="card p-3 sm:p-5">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-yellow-500/20 flex items-center justify-center">
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wider">Pending</p>
-                    <p className="text-2xl font-bold text-white">{stats.pending}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider">Pending</p>
+                    <p className="text-base sm:text-2xl font-bold text-white">{stats.pending}</p>
                   </div>
                 </div>
               </div>
               
-              <div className="card p-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
-                    <XCircle className="w-5 h-5 text-red-400" />
+              <div className="card p-3 sm:p-5">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-red-500/20 flex items-center justify-center">
+                    <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wider">Refunded</p>
-                    <p className="text-2xl font-bold text-white">{stats.refunded}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider">Refunded</p>
+                    <p className="text-base sm:text-2xl font-bold text-white">{stats.refunded}</p>
                   </div>
                 </div>
               </div>
@@ -222,28 +222,28 @@ export default function AdminPaymentsPage() {
 
           {/* Provider Breakdown */}
           {byProvider && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              <div className="card p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <div className="card p-3 sm:p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">eSewa</p>
-                    <p className="text-xl font-bold text-white">Rs. {byProvider.esewa.amount.toLocaleString()}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider mb-1">eSewa</p>
+                    <p className="text-lg sm:text-xl font-bold text-white">Rs. {byProvider.esewa.amount.toLocaleString()}</p>
                     <p className="text-xs text-gray-500">{byProvider.esewa.count} transactions</p>
                   </div>
-                  <div className="w-12 h-12 rounded-xl bg-green-600/20 flex items-center justify-center">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-600/20 flex items-center justify-center">
                     <span className="text-green-400 font-bold text-lg">e</span>
                   </div>
                 </div>
               </div>
               
-              <div className="card p-5">
+              <div className="card p-3 sm:p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Khalti</p>
-                    <p className="text-xl font-bold text-white">Rs. {byProvider.khalti.amount.toLocaleString()}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider mb-1">Khalti</p>
+                    <p className="text-lg sm:text-xl font-bold text-white">Rs. {byProvider.khalti.amount.toLocaleString()}</p>
                     <p className="text-xs text-gray-500">{byProvider.khalti.count} transactions</p>
                   </div>
-                  <div className="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-purple-600/20 flex items-center justify-center">
                     <span className="text-purple-400 font-bold text-lg">K</span>
                   </div>
                 </div>
@@ -252,7 +252,7 @@ export default function AdminPaymentsPage() {
           )}
 
           {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3 bg-surface border border-border rounded-lg p-2 mb-6 w-fit">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-surface border border-border rounded-lg p-2 mb-4 sm:mb-6 w-full sm:w-fit">
             <div className="flex items-center gap-2 pl-2 border-r border-border pr-3">
               <Filter size={16} className="text-muted-foreground" />
               <span className="text-sm font-semibold text-muted-foreground">Filters</span>
@@ -272,7 +272,7 @@ export default function AdminPaymentsPage() {
             <select 
               value={providerFilter} 
               onChange={e => setProviderFilter(e.target.value)}
-              className="bg-transparent text-sm text-white focus:outline-none cursor-pointer border-l border-border pl-3"
+              className="bg-transparent text-sm text-white focus:outline-none cursor-pointer sm:border-l sm:border-border sm:pl-3"
             >
               <option value="all" className="bg-surface">All Providers</option>
               <option value="esewa" className="bg-surface">eSewa</option>

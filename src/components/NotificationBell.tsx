@@ -186,7 +186,7 @@ function NotifRow({
           </div>
 
           <p
-            className="text-xs mt-0.5 leading-relaxed"
+            className="text-xs mt-0.5 leading-relaxed line-clamp-2"
             style={{ color: isRead ? '#475569' : '#94a3b8' }}
           >
             {notif.body}
